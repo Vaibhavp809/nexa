@@ -1,0 +1,42 @@
+{
+    "manifest_version": 3,
+    "name": "Nexa AI Assistant",
+    "version": "1.0.0",
+    "description": "Floating AI assistant with chat, summarize, and translate features powered by Groq",
+    "permissions": [
+        "storage",
+        "scripting",
+        "activeTab",
+        "contextMenus",
+        "tabs"
+    ],
+    "host_permissions": [
+        "<all_urls>",
+        "http://localhost:5173/*",
+        "http://localhost:4000/*",
+        "https://nexa-yp12.onrender.com/*",
+        "https://nexa-nu-three.vercel.app/*"
+    ],
+    "background": {
+        "service_worker": "service-worker.js"
+    },
+    "content_scripts": [
+        {
+            "matches": [
+                "<all_urls>"
+            ],
+            "js": [
+                "content.js"
+            ],
+            "run_at": "document_idle",
+            "all_frames": false
+        }
+    ],
+    "action": {
+        "default_popup": "bubble/index.html",
+        "default_title": "Nexa AI Assistant"
+    },
+    "content_security_policy": {
+        "extension_pages": "script-src 'self'; object-src 'self'"
+    }
+}

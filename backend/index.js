@@ -9,10 +9,22 @@ dotenv.config();
 
 const app = express();
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://nexa-nu-three.vercel.app'
-  ],
+  origin: function (origin, callback) {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    const allowedOrigins = [
+      'http://localhost:5173',
+      'https://nexa-nu-three.vercel.app'
+    ];
+
+    // Allow all chrome-extension origins in development
+    if (origin.startsWith('chrome-extension://') || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 app.use(express.json());
