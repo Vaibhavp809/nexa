@@ -1,0 +1,8 @@
+body { font-family: Arial, sans-serif; background: #f4f6f8; margin:0; padding:0; }
+.container { max-width:800px; margin:80px auto; background:white; padding:24px; border-radius:8px; box-shadow:0 6px 18px rgba(0,0,0,0.08);}
+h2 { margin-top:0; }
+input, button, textarea { width:100%; padding:10px; margin-top:8px; border-radius:6px; border:1px solid #ddd; box-sizing:border-box; }
+button { cursor:pointer; background:#0b5fff; color:white; border:none; }
+.row { display:flex; gap:8px; }
+.link { margin-top:12px; text-align:center; }
+pre { background:#f0f0f0; padding:12px; border-radius:6px; overflow-x:auto; overflow-y:auto; max-height:600px; width:100%; word-wrap:break-word; white-space:pre-wrap; }
