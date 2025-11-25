@@ -52,6 +52,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         return true;
     }
+    if (message.type === 'sync_cookies') {
+        syncTokenFromCookies().then((token) => {
+            sendResponse({ success: true, token });
+        });
+        return true;
+    }
 });
 
 // Handle Groq API requests
@@ -114,3 +120,42 @@ async function handleGroqRequest(message, sendResponse) {
         });
     }
 }
+
+// Cookie syncing logic
+const FRONTEND_URL = 'https://nexa-nu-three.vercel.app';
+
+async function syncTokenFromCookies() {
+    try {
+        const cookie = await chrome.cookies.get({
+            url: FRONTEND_URL,
+            name: 'nexa_token'
+        });
+
+        if (cookie) {
+            await chrome.storage.local.set({ 'nexa_token': cookie.value });
+            console.log('Token synced from cookie');
+            return cookie.value;
+        } else {
+            console.log('No auth cookie found');
+            return null;
+        }
+    } catch (error) {
+        console.error('Cookie sync error:', error);
+        return null;
+    }
+}
+
+// Sync on startup and when cookies change
+chrome.runtime.onStartup.addListener(syncTokenFromCookies);
+chrome.cookies.onChanged.addListener((changeInfo) => {
+    if (changeInfo.cookie.name === 'nexa_token' && changeInfo.cookie.domain.includes('nexa-nu-three.vercel.app')) {
+        if (changeInfo.removed) {
+            chrome.storage.local.remove('nexa_token');
+        } else {
+            chrome.storage.local.set({ 'nexa_token': changeInfo.cookie.value });
+        }
+    }
+});
+
+// Initial sync
+syncTokenFromCookies();

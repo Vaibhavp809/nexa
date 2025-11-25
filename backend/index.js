@@ -2,8 +2,10 @@ import express from 'express';
 import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import cors from 'cors';
+import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
 import groqRoutes from './routes/groq.js';
+import notesRoutes from './routes/notes.js';
 
 dotenv.config();
 
@@ -27,10 +29,12 @@ app.use(cors({
   },
   credentials: true
 }));
+app.use(cookieParser());
 app.use(express.json());
 
 app.use('/api/auth', authRoutes);
 app.use('/api/groq', groqRoutes);
+app.use('/api/notes', notesRoutes);
 
 const PORT = process.env.PORT || 4000;
 

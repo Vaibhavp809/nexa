@@ -184,14 +184,22 @@
     }
 
     // Detect text selection
-    document.addEventListener('mouseup', () => {
+    document.addEventListener('mouseup', (e) => {
+        // Don't trigger if clicking inside bubble
+        if (bubbleContainer && bubbleContainer.contains(e.target)) return;
+
         const selection = window.getSelection().toString().trim();
         if (selection.length > 8) {
             currentSelection = selection;
-            // Optionally notify bubble of new selection
+
+            // Auto-expand bubble if not already expanded
             if (bubbleIframe && bubbleIframe.contentWindow) {
+                // First show the bubble if hidden
+                bubbleContainer.style.display = 'block';
+
+                // Send selection to bubble
                 bubbleIframe.contentWindow.postMessage({
-                    type: 'selectionAvailable',
+                    type: 'summarize', // Auto-switch to summarize tab
                     text: selection
                 }, '*');
             }

@@ -6,7 +6,12 @@ import Login from './pages/Login'
 import Register from './pages/Register'
 import Home from './pages/Home'
 import GroqDemo from './pages/GroqDemo'
+import Notes from './pages/Notes'
+import Profile from './pages/Profile'
+import Settings from './pages/Settings'
 import './index.css'
+
+import Navbar from './components/Navbar'
 
 function AppRoutes() {
   const { token, loading } = useAuth()
@@ -20,12 +25,18 @@ function AppRoutes() {
   }
 
   return (
-    <Routes>
-      <Route path='/' element={token ? <Home /> : <Navigate to='/login' />} />
-      <Route path='/login' element={!token ? <Login /> : <Navigate to='/' />} />
-      <Route path='/register' element={!token ? <Register /> : <Navigate to='/' />} />
-      <Route path='/groq' element={token ? <GroqDemo /> : <Navigate to='/login' />} />
-    </Routes>
+    <>
+      {token && <Navbar />}
+      <Routes>
+        <Route path='/' element={token ? <Home /> : <Navigate to='/login' />} />
+        <Route path='/login' element={!token ? <Login /> : <Navigate to='/' />} />
+        <Route path='/register' element={!token ? <Register /> : <Navigate to='/' />} />
+        <Route path='/groq' element={token ? <GroqDemo /> : <Navigate to='/login' />} />
+        <Route path='/notes' element={token ? <Notes /> : <Navigate to='/login' />} />
+        <Route path='/profile' element={token ? <Profile /> : <Navigate to='/login' />} />
+        <Route path='/settings' element={token ? <Settings /> : <Navigate to='/login' />} />
+      </Routes>
+    </>
   )
 }
 

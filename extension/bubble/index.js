@@ -58,6 +58,10 @@
     // Check authentication status
     async function checkAuth() {
         try {
+            // First try to sync from cookies
+            await chrome.runtime.sendMessage({ type: 'sync_cookies' });
+
+            // Then check if we have a token
             const response = await chrome.runtime.sendMessage({ type: 'get_token' });
             isAuthenticated = !!response.token;
             updateAuthUI();
@@ -361,7 +365,8 @@
     }
 
     function openLogin() {
-        chrome.tabs.create({ url: 'https://nexa-nu-three.vercel.app/login' });
+        // Send message to parent window (content script) to open login page
+        window.parent.postMessage({ type: 'openLogin' }, '*');
     }
 
     function showAuthPrompt() {
