@@ -11,7 +11,7 @@ const app = express();
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'https://nexa-nu-three.vercel.app/'  // Replace with your actual Vercel URL
+    'https://nexa-nu-three.vercel.app'
   ],
   credentials: true
 }));
