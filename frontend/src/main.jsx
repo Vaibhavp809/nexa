@@ -6,6 +6,7 @@ import { TranslationProvider } from './hooks/useTranslation.jsx'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Home from './pages/Home'
+import Landing from './pages/Landing'
 import GroqDemo from './pages/GroqDemo'
 import Notes from './pages/Notes'
 import Profile from './pages/Profile'
@@ -52,7 +53,8 @@ function AppRoutes() {
       {token && <Navbar />}
       {token && <Bubble />}
       <Routes>
-        <Route path='/' element={token ? <Home /> : <Navigate to='/login' />} />
+        <Route path='/' element={token ? <Home /> : <Navigate to='/landing' />} />
+        <Route path='/landing' element={!token ? <Landing /> : <Navigate to='/' />} />
         <Route path='/login' element={!token ? <Login /> : <Navigate to='/' />} />
         <Route path='/register' element={!token ? <Register /> : <Navigate to='/' />} />
         <Route path='/groq' element={token ? <GroqDemo /> : <Navigate to='/login' />} />

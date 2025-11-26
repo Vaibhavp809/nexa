@@ -1,505 +1,798 @@
-// Content script - injects bubble into web pages
-(function () {
-    'use strict';
+// Nexa Extension - Simplified Content Script
+(function(){
+  if (window.__nexa_injected) return;
+  window.__nexa_injected = true;
 
-    // Don't inject on extension pages or already injected
-    if (window.location.protocol === 'chrome-extension:' || 
-        window.location.protocol === 'moz-extension:' ||
-        window.location.protocol === 'edge-extension:' ||
-        window.nexaBubbleInjected) {
-        return;
+  // Helper function to check if extension context is valid
+  function isExtensionContextValid() {
+    try {
+      return typeof chrome !== 'undefined' && 
+             chrome.runtime && 
+             chrome.runtime.id &&
+             !chrome.runtime.lastError;
+    } catch (e) {
+      return false;
     }
-    window.nexaBubbleInjected = true;
+  }
+
+  // Helper function to safely send messages
+  function safeSendMessage(message, callback) {
+    if (!isExtensionContextValid()) {
+      console.warn('Extension context invalidated, cannot send message:', message.type);
+      if (callback) callback({ error: 'Extension context invalidated' });
+      return;
+    }
+
+    try {
+      chrome.runtime.sendMessage(message, (response) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Message error:', chrome.runtime.lastError.message);
+          if (callback) callback({ error: chrome.runtime.lastError.message });
+          return;
+        }
+        if (callback) callback(response);
+      });
+    } catch (e) {
+      console.warn('Failed to send message:', e);
+      if (callback) callback({ error: e.message });
+    }
+  }
+
+  // Helper function to safely access storage
+  function safeStorageGet(keys, callback) {
+    if (!isExtensionContextValid()) {
+      console.warn('Extension context invalidated, cannot access storage');
+      if (callback) callback({});
+      return;
+    }
+
+    try {
+      chrome.storage.local.get(keys, (result) => {
+        if (chrome.runtime.lastError) {
+          console.warn('Storage error:', chrome.runtime.lastError.message);
+          if (callback) callback({});
+          return;
+        }
+        if (callback) callback(result);
+      });
+    } catch (e) {
+      console.warn('Failed to access storage:', e);
+      if (callback) callback({});
+    }
+  }
+
+  function safeStorageSet(data, callback) {
+    if (!isExtensionContextValid()) {
+      console.warn('Extension context invalidated, cannot set storage');
+      if (callback) callback();
+      return;
+    }
+
+    try {
+      chrome.storage.local.set(data, () => {
+        if (chrome.runtime.lastError) {
+          console.warn('Storage set error:', chrome.runtime.lastError.message);
+        }
+        if (callback) callback();
+      });
+    } catch (e) {
+      console.warn('Failed to set storage:', e);
+      if (callback) callback();
+    }
+  }
+
+  // Create bubble
+  const bubble = document.createElement('div');
+  bubble.id = 'nexa-bubble';
+  bubble.innerHTML = '<div class="inner">N</div>';
+  bubble.setAttribute('title', 'Nexa AI Assistant');
+  
+  // Load saved icon and update bubble
+  safeStorageGet(['nexa.bubble.icon'], (result) => {
+    const icon = result && result['nexa.bubble.icon'] || 'bot';
+    const iconMap = {
+      'bot': '🤖',
+      'sparkles': '✨',
+      'zap': '⚡',
+      'circle': '●'
+    };
+    const iconEmoji = iconMap[icon] || 'N';
+    const inner = bubble.querySelector('.inner');
+    if (inner) {
+      inner.textContent = iconEmoji;
+    }
+  });
+
+  // Feature menu container (will be positioned smartly)
+  const semi = document.createElement('div');
+  semi.id = 'nexa-semicircle';
+  semi.className = 'nexa-menu';
+
+  // Translations for bubble features (simplified for content script)
+  const featureTranslations = {
+    en: {
+      summarize: 'Summarize',
+      translate: 'Translate',
+      quicknotes: 'Quick Notes',
+      voicenotes: 'Voice Notes',
+      voicesearch: 'Voice Search',
+      tasks: 'Tasks',
+      settings: 'Settings'
+    },
+    hi: {
+      summarize: 'सारांश',
+      translate: 'अनुवाद',
+      quicknotes: 'त्वरित नोट्स',
+      voicenotes: 'वॉइस नोट्स',
+      voicesearch: 'वॉइस खोज',
+      tasks: 'कार्य',
+      settings: 'सेटिंग्स'
+    },
+    mr: {
+      summarize: 'सारांश',
+      translate: 'भाषांतर',
+      quicknotes: 'त्वरित नोट्स',
+      voicenotes: 'व्हॉइस नोट्स',
+      voicesearch: 'व्हॉइस शोध',
+      tasks: 'कार्ये',
+      settings: 'सेटिंग्ज'
+    },
+    kn: {
+      summarize: 'ಸಾರಾಂಶ',
+      translate: 'ಅನುವಾದ',
+      quicknotes: 'ತ್ವರಿತ ಟಿಪ್ಪಣಿಗಳು',
+      voicenotes: 'ವಾಯ್ಸ್ ಟಿಪ್ಪಣಿಗಳು',
+      voicesearch: 'ವಾಯ್ಸ್ ಹುಡುಕಾಟ',
+      tasks: 'ಕಾರ್ಯಗಳು',
+      settings: 'ಸೆಟ್ಟಿಂಗ್ಗಳು'
+    }
+  };
+
+  // Function to get translated feature name
+  function getFeatureTranslation(featureKey, lang) {
+    const langTranslations = featureTranslations[lang] || featureTranslations['en'];
+    return langTranslations[featureKey] || featureKey;
+  }
+
+  // Feature buttons (will be translated after language loads)
+  const features = [
+    { id: 'feat-summarize', key: 'summarize', label: 'Summ', title: 'Summarize', icon: '📝' },
+    { id: 'feat-translate', key: 'translate', label: 'Trans', title: 'Translate', icon: '🌐' },
+    { id: 'feat-notes', key: 'quicknotes', label: 'Notes', title: 'Quick Notes', icon: '📋' },
+    { id: 'feat-tasks', key: 'tasks', label: 'Tasks', title: 'Task Reminder', icon: '✅' },
+    { id: 'feat-voice', key: 'voicenotes', label: 'Voice', title: 'Voice Notes', icon: '🎤' },
+    { id: 'feat-search', key: 'voicesearch', label: 'Search', title: 'Voice Search', icon: '🔍' },
+    { id: 'feat-settings', key: 'settings', label: '⚙️', title: 'Settings', icon: '⚙️' }
+  ];
+
+  // Function to update feature labels with translations
+  function updateFeatureTranslations(lang) {
+    features.forEach((f, idx) => {
+      const btn = document.getElementById(f.id);
+      if (btn) {
+        const translatedTitle = getFeatureTranslation(f.key, lang);
+        btn.setAttribute('title', translatedTitle);
+        // Update label if it's not an icon-only button
+        if (f.id !== 'feat-settings') {
+          const span = btn.querySelector('span');
+          if (span && span.textContent !== f.icon) {
+            // Keep short label format, but update title
+            // For longer feature names, use first 4-5 chars
+            const shortLabel = translatedTitle.length > 5 
+              ? translatedTitle.substring(0, 5) 
+              : translatedTitle;
+            // span.textContent = shortLabel;
+          }
+        }
+      }
+    });
+  }
+
+  features.forEach((f, idx) => {
+    const btn = document.createElement('button');
+    btn.className = 'nexa-feature f' + (idx + 1);
+    btn.id = f.id;
+    btn.title = f.title;
+    btn.innerHTML = '<span>' + (f.icon || f.label) + '</span>';
+    semi.appendChild(btn);
+
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      semi.classList.remove('open');
+      
+      // Visual feedback animation (like reference)
+      btn.animate([
+        { transform: 'scale(1)' },
+        { transform: 'scale(0.9)' },
+        { transform: 'scale(1)' }
+      ], { duration: 220 });
+      
+      // Show quick tooltip (like reference)
+      const tooltip = document.createElement('div');
+      tooltip.textContent = f.title + ' triggered';
+      tooltip.style.cssText = `
+        position: fixed;
+        right: ${(parseInt(getComputedStyle(bubble).right) || 20) + 80}px;
+        bottom: ${(parseInt(getComputedStyle(bubble).bottom) || 20) + 10}px;
+        background: rgba(0, 0, 0, 0.8);
+        color: #fff;
+        padding: 6px 8px;
+        border-radius: 6px;
+        z-index: 2147483647;
+        font-size: 12px;
+        font-family: Arial, sans-serif;
+      `;
+      document.documentElement.appendChild(tooltip);
+      setTimeout(() => tooltip.remove(), 900);
+      
+      if (f.id === 'feat-settings') {
+        // Open settings in side panel
+        safeSendMessage({ type: 'open_side_panel', page: 'settings' });
+      } else if (f.id === 'feat-translate') {
+        // Open translate page in side panel
+        safeSendMessage({ type: 'open_side_panel', page: 'translate' });
+      } else if (f.id === 'feat-notes') {
+        // Open notes page in side panel
+        safeSendMessage({ type: 'open_side_panel', page: 'notes' });
+      } else if (f.id === 'feat-tasks') {
+        // Open tasks page in side panel
+        safeSendMessage({ type: 'open_side_panel', page: 'tasks' });
+      } else if (f.id === 'feat-voice') {
+        // Open voice notes page in side panel
+        safeSendMessage({ type: 'open_side_panel', page: 'voicenotes' });
+      } else if (f.id === 'feat-search') {
+        // Open voice search page in side panel
+        safeSendMessage({ type: 'open_side_panel', page: 'voicesearch' });
+      } else if (f.id === 'feat-summarize') {
+        // For summarizer, enable text selection mode
+        enableTextSelectionMode();
+        
+        // Send message to background to notify side panel
+        safeSendMessage({ 
+          toSidePanel: true,
+          feature: f.id,
+          label: f.label,
+          mode: 'summarize'
+        });
+        
+        // Open chat in side panel for features
+        safeSendMessage({ type: 'open_side_panel', page: 'chat' });
+      } else {
+        // Send message to background to notify side panel (like reference)
+        safeSendMessage({ 
+          toSidePanel: true,
+          feature: f.id,
+          label: f.label 
+        });
+        
+        // Open chat in side panel for features
+        safeSendMessage({ type: 'open_side_panel', page: 'chat' });
+      }
+    });
+  });
+
+  // Attach to document
+  document.documentElement.appendChild(bubble);
+  document.documentElement.appendChild(semi);
+
+  // Dragging logic - simple pointer events approach
+  let isDragging = false;
+  let startX, startY, origRight, origBottom;
+  
+  bubble.addEventListener('pointerdown', (e) => {
+    if (e.button !== 0) return; // Only left click
+    isDragging = true;
+    bubble.setPointerCapture(e.pointerId);
+    startX = e.clientX;
+    startY = e.clientY;
+    const rect = bubble.getBoundingClientRect();
+    origRight = window.innerWidth - rect.right;
+    origBottom = window.innerHeight - rect.bottom;
+    bubble.style.cursor = 'grabbing';
+  });
+
+  document.addEventListener('pointermove', (e) => {
+    if (!isDragging) return;
+    const dx = startX - e.clientX;
+    const dy = startY - e.clientY;
+    const newRight = origRight + dx;
+    const newBottom = origBottom + dy;
     
-    console.log('Nexa content script loaded on:', window.location.href);
+    // Clamp to viewport
+    const margin = 10;
+    const maxRight = window.innerWidth - bubble.offsetWidth - margin;
+    const maxBottom = window.innerHeight - bubble.offsetHeight - margin;
+    
+    bubble.style.right = Math.max(margin, Math.min(newRight, maxRight)) + 'px';
+    bubble.style.bottom = Math.max(margin, Math.min(newBottom, maxBottom)) + 'px';
+    
+    // Move semicircle to follow bubble
+    semi.style.right = bubble.style.right;
+    semi.style.bottom = bubble.style.bottom;
+    
+    // Update feature positions during drag
+    updateFeaturePositions();
+    
+    // Save position (throttled to avoid too many storage writes)
+    if (!window.positionSaveTimeout) {
+      window.positionSaveTimeout = setTimeout(() => {
+        safeStorageSet({
+          'nexa.bubble.pos': {
+            right: bubble.style.right,
+            bottom: bubble.style.bottom
+          }
+        });
+        window.positionSaveTimeout = null;
+      }, 200);
+    }
+  });
 
-    let bubbleContainer = null;
-    let bubbleIframe = null;
-    let currentSelection = '';
+  document.addEventListener('pointerup', (e) => {
+    if (isDragging) {
+      isDragging = false;
+      bubble.style.cursor = 'grab';
+      // Update feature positions after drag ends
+      setTimeout(updateFeaturePositions, 50);
+    }
+  });
 
-    // Create bubble container and iframe
-    function createBubble() {
-        // Check if already exists
-        if (bubbleContainer && document.body.contains(bubbleContainer)) {
-            return;
+  // Smart positioning: Update feature positions based on bubble location
+  const updateFeaturePositions = () => {
+    const rect = bubble.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const bubbleCenterX = rect.left + rect.width / 2;
+    const bubbleCenterY = rect.top + rect.height / 2;
+    
+    // Determine if bubble is on left or right side
+    const isOnLeft = bubbleCenterX < viewportWidth / 2;
+    
+    // Determine if bubble is in upper half
+    const isInUpperHalf = bubbleCenterY < viewportHeight / 2;
+    
+    // Calculate distance from edges
+    const distanceFromTop = rect.top;
+    const distanceFromBottom = viewportHeight - rect.bottom;
+    
+    // Decide positioning
+    let featuresDirection = 'left'; // Default: features appear to left of bubble
+    let verticalDirection = 'up'; // Default: features stack upward
+    
+    if (isOnLeft) {
+      // Bubble on left side → features appear on right
+      featuresDirection = 'right';
+    } else {
+      // Bubble on right side → features appear on left
+      featuresDirection = 'left';
+    }
+    
+    // If bubble is in upper corners, features should go downward
+    if (isInUpperHalf && distanceFromTop < 150) {
+      verticalDirection = 'down';
+    } else if (!isInUpperHalf && distanceFromBottom < 150) {
+      verticalDirection = 'up';
+    }
+    
+    // Apply positioning classes
+    semi.className = 'nexa-menu';
+    semi.classList.add(featuresDirection);
+    semi.classList.add(verticalDirection);
+    
+    // Update semi position to match bubble
+    semi.style.right = (window.innerWidth - rect.right) + 'px';
+    semi.style.bottom = (window.innerHeight - rect.bottom) + 'px';
+  };
+  
+  // Load saved language and apply translations to features
+  safeStorageGet(['nexa.preferredLanguage'], (langResult) => {
+    const currentLang = (langResult && langResult['nexa.preferredLanguage']) || 'en';
+    updateFeatureTranslations(currentLang);
+    
+    // Listen for language changes
+    if (isExtensionContextValid()) {
+      chrome.storage.onChanged.addListener((changes, areaName) => {
+        if (areaName === 'local' && changes['nexa.preferredLanguage']) {
+          const newLang = changes['nexa.preferredLanguage'].newValue || 'en';
+          updateFeatureTranslations(newLang);
+        }
+      });
+    }
+  });
+
+  // Load saved position and then update feature positions
+  safeStorageGet(['nexa.bubble.pos'], (result) => {
+    if (result && result['nexa.bubble.pos']) {
+      const pos = result['nexa.bubble.pos'];
+      if (pos.right) bubble.style.right = pos.right;
+      if (pos.bottom) bubble.style.bottom = pos.bottom;
+      // Update semicircle position
+      semi.style.right = bubble.style.right;
+      semi.style.bottom = bubble.style.bottom;
+    }
+    // Update feature positions after loading saved position
+    setTimeout(updateFeaturePositions, 100);
+  });
+  
+  // Initialize and update on resize/drag
+  updateFeaturePositions();
+  window.addEventListener('resize', updateFeaturePositions);
+  
+
+  // Click bubble toggles feature menu (like reference)
+  bubble.addEventListener('click', (e) => {
+    if (isDragging) return; // Don't toggle if dragging
+    // Update positions before opening to ensure correct placement
+    updateFeaturePositions();
+    semi.classList.toggle('open');
+  });
+
+  // Right-click also toggles (for accessibility, like reference)
+  bubble.addEventListener('contextmenu', (e) => {
+    e.preventDefault();
+    semi.classList.toggle('open');
+  });
+
+  // Close semicircle when clicking elsewhere
+  document.addEventListener('click', (e) => {
+    if (!bubble.contains(e.target) && !semi.contains(e.target)) {
+      semi.classList.remove('open');
+    }
+  }, true);
+
+  // Text selection mode for summarizer
+  let textSelectionMode = false;
+  let selectionHandler = null;
+  
+  function enableTextSelectionMode() {
+    if (textSelectionMode) return; // Already enabled
+    
+    textSelectionMode = true;
+    
+    // Show visual indicator
+    const indicator = document.createElement('div');
+    indicator.id = 'nexa-selection-indicator';
+    indicator.textContent = '📝 Select text to summarize';
+    indicator.style.cssText = `
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #4f46e5, #06b6d4);
+      color: white;
+      padding: 12px 24px;
+      border-radius: 8px;
+      z-index: 2147483647;
+      font-size: 14px;
+      font-family: Arial, sans-serif;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+      pointer-events: none;
+      animation: fadeInOut 3s ease-in-out;
+    `;
+    
+    // Add fade animation
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes fadeInOut {
+        0%, 100% { opacity: 0; }
+        20%, 80% { opacity: 1; }
+      }
+    `;
+    document.head.appendChild(style);
+    document.body.appendChild(indicator);
+    
+    // Remove indicator after 3 seconds
+    setTimeout(() => {
+      if (indicator.parentNode) {
+        indicator.remove();
+      }
+    }, 3000);
+    
+    // Listen for text selection
+    selectionHandler = (e) => {
+      setTimeout(() => {
+        const selection = window.getSelection();
+        const selectedText = selection.toString().trim();
+        
+        if (selectedText && selectedText.length > 0) {
+          // Send selected text to service worker
+          safeSendMessage({
+            type: 'text_selected',
+            text: selectedText,
+            feature: 'summarize'
+          });
+          
+          // Show feedback that text was captured
+          const feedback = document.createElement('div');
+          feedback.textContent = '✓ Text captured! Opening side panel...';
+          feedback.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(34, 197, 94, 0.9);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 6px;
+            z-index: 2147483647;
+            font-size: 13px;
+            font-family: Arial, sans-serif;
+          `;
+          document.body.appendChild(feedback);
+          setTimeout(() => feedback.remove(), 2000);
+          
+          // Disable text selection mode after selection
+          disableTextSelectionMode();
+          
+          // Clear selection
+          selection.removeAllRanges();
+        }
+      }, 100);
+    };
+    
+    document.addEventListener('mouseup', selectionHandler, true);
+    
+    // Disable after 30 seconds if no selection
+    setTimeout(() => {
+      if (textSelectionMode) {
+        disableTextSelectionMode();
+      }
+    }, 30000);
+  }
+  
+  // Task notification system
+  let taskNotification = null;
+  let taskCheckInterval = null;
+  
+  async function checkUpcomingTasks() {
+    try {
+      // Check if user is authenticated first
+      safeStorageGet(['nexa_token'], async (result) => {
+        if (!result || !result.nexa_token) {
+          return; // Not logged in, skip task check
         }
         
-        try {
-            // Create container
-            bubbleContainer = document.createElement('div');
-            bubbleContainer.id = 'nexa-bubble-root';
-            bubbleContainer.style.cssText = `
-                position: fixed !important;
-                bottom: 20px !important;
-                right: 20px !important;
-                z-index: 2147483647 !important;
-                width: 64px !important;
-                height: 64px !important;
-                transition: width 0.3s, height 0.3s;
-                cursor: grab !important;
-                pointer-events: auto !important;
-                display: block !important;
-                visibility: visible !important;
-                opacity: 1 !important;
-            `;
-
-            // Create iframe
-            bubbleIframe = document.createElement('iframe');
-            const bubbleUrl = chrome.runtime.getURL('bubble/index.html');
-            bubbleIframe.src = bubbleUrl;
-            bubbleIframe.style.cssText = `
-                width: 100% !important;
-                height: 100% !important;
-                border: none !important;
-                border-radius: 50% !important;
-                transition: border-radius 0.3s;
-                background: transparent !important;
-                display: block !important;
-                pointer-events: auto !important;
-            `;
-            bubbleIframe.setAttribute('sandbox', 'allow-scripts allow-same-origin allow-forms allow-modals allow-popups');
-            bubbleIframe.setAttribute('allow', 'microphone');
-
-            bubbleContainer.appendChild(bubbleIframe);
-            
-            if (document.body) {
-                document.body.appendChild(bubbleContainer);
-                console.log('Nexa bubble created successfully at', bubbleUrl);
-                console.log('Bubble container:', bubbleContainer);
-                console.log('Bubble container style:', window.getComputedStyle(bubbleContainer));
-                
-                // Force visibility with !important
-                bubbleContainer.style.setProperty('display', 'block', 'important');
-                bubbleContainer.style.setProperty('visibility', 'visible', 'important');
-                bubbleContainer.style.setProperty('opacity', '1', 'important');
-                bubbleContainer.style.setProperty('z-index', '2147483647', 'important');
-                
-                // Verify it's visible
-                setTimeout(() => {
-                    const rect = bubbleContainer.getBoundingClientRect();
-                    console.log('Bubble position:', rect);
-                    console.log('Bubble visible?', rect.width > 0 && rect.height > 0);
-                }, 500);
-
-                // Load saved position - ensure it's within viewport
-                chrome.storage.local.get(['nexa.bubble.pos'], (result) => {
-                    const bubbleSize = 64;
-                    const margin = 20;
-                    
-                    if (result['nexa.bubble.pos'] && bubbleContainer) {
-                        const pos = result['nexa.bubble.pos'];
-                        
-                        // Get position values
-                        let x = pos.x !== undefined ? pos.x : null;
-                        let y = pos.y !== undefined ? pos.y : null;
-                        
-                        // Calculate max bounds
-                        const maxX = window.innerWidth - bubbleSize - margin;
-                        const maxY = window.innerHeight - bubbleSize - margin;
-                        
-                        // If position exists and is valid, clamp it to viewport
-                        // Check for negative values or values outside viewport
-                        if (x !== null && y !== null && x >= 0 && y >= 0 && 
-                            x < window.innerWidth && y < window.innerHeight) {
-                            // Clamp to viewport bounds
-                            x = Math.max(margin, Math.min(x, maxX));
-                            y = Math.max(margin, Math.min(y, maxY));
-                            bubbleContainer.style.left = x + 'px';
-                            bubbleContainer.style.top = y + 'px';
-                            bubbleContainer.style.right = 'auto';
-                            bubbleContainer.style.bottom = 'auto';
-                            console.log('Bubble positioned at saved location (clamped):', { x, y });
-                        } else {
-                            // Invalid position (negative or out of bounds), use default
-                            console.warn('Saved position invalid (x:', x, 'y:', y, '), resetting to default');
-                            bubbleContainer.style.right = margin + 'px';
-                            bubbleContainer.style.bottom = margin + 'px';
-                            bubbleContainer.style.left = 'auto';
-                            bubbleContainer.style.top = 'auto';
-                            // Clear invalid position
-                            chrome.storage.local.remove(['nexa.bubble.pos'], () => {
-                                console.log('Invalid position cleared from storage');
-                            });
-                        }
-                    } else {
-                        // Default position (bottom right)
-                        bubbleContainer.style.right = margin + 'px';
-                        bubbleContainer.style.bottom = margin + 'px';
-                        bubbleContainer.style.left = 'auto';
-                        bubbleContainer.style.top = 'auto';
-                        console.log('Bubble using default position (no saved position)');
-                    }
-                    
-                    // Verify it's visible after positioning
-                    setTimeout(() => {
-                        const rect = bubbleContainer.getBoundingClientRect();
-                        console.log('Bubble final position:', rect);
-                        const isVisible = rect.width > 0 && rect.height > 0;
-                        const isOnScreen = rect.top >= 0 && rect.left >= 0 && 
-                                          rect.bottom <= window.innerHeight + 10 && 
-                                          rect.right <= window.innerWidth + 10;
-                        console.log('Bubble visible?', isVisible);
-                        console.log('Bubble on screen?', isOnScreen);
-                        
-                        // If bubble is still off-screen, reset to default
-                        if (!isOnScreen && isVisible) {
-                            console.warn('Bubble is off-screen, resetting to default position');
-                            bubbleContainer.style.left = 'auto';
-                            bubbleContainer.style.top = 'auto';
-                            bubbleContainer.style.right = margin + 'px';
-                            bubbleContainer.style.bottom = margin + 'px';
-                            chrome.storage.local.remove(['nexa.bubble.pos']);
-                        }
-                    }, 200);
-                });
-
-                // Make bubble draggable
-                makeDraggable(bubbleContainer);
-
-                setupMessageListeners();
-            } else {
-                console.error('Document body not available');
-            }
-        } catch (error) {
-            console.error('Error creating bubble:', error);
-        }
-    }
-
-    // Make element draggable
-    function makeDraggable(element) {
-        let isDragging = false;
-        let currentX;
-        let currentY;
-        let initialX;
-        let initialY;
-        let dragStartX;
-        let dragStartY;
-        let hasMoved = false;
-
-        element.addEventListener('mousedown', dragStart);
-        element.addEventListener('touchstart', dragStart, { passive: false });
-        document.addEventListener('mousemove', drag);
-        document.addEventListener('touchmove', drag, { passive: false });
-        document.addEventListener('mouseup', dragEnd);
-        document.addEventListener('touchend', dragEnd);
-
-        function dragStart(e) {
-            // Get client position (handle both mouse and touch)
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            
-            dragStartX = clientX;
-            dragStartY = clientY;
-            hasMoved = false;
-            
-            // Calculate initial offset
-            const rect = element.getBoundingClientRect();
-            initialX = clientX - rect.left;
-            initialY = clientY - rect.top;
-            
-            // Don't prevent default yet - let click handler work if no drag happens
-        }
-
-        function drag(e) {
-            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
-            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
-            
-            if (!clientX || !clientY) return;
-            
-            // Check if mouse has moved enough to start dragging
-            const moveThreshold = 5;
-            const deltaX = Math.abs(clientX - dragStartX);
-            const deltaY = Math.abs(clientY - dragStartY);
-            
-            if (!isDragging && (deltaX > moveThreshold || deltaY > moveThreshold)) {
-                // Start dragging
-                isDragging = true;
-                hasMoved = true;
-                
-                // Disable pointer events on iframe during drag
-                if (bubbleIframe) bubbleIframe.style.pointerEvents = 'none';
-                element.style.cursor = 'grabbing';
-                e.preventDefault();
-            }
-            
-            if (isDragging) {
-                e.preventDefault();
-                currentX = clientX - initialX;
-                currentY = clientY - initialY;
-
-                // Keep bubble within viewport (with margin)
-                const margin = 10;
-                const maxX = window.innerWidth - element.offsetWidth - margin;
-                const maxY = window.innerHeight - element.offsetHeight - margin;
-
-                currentX = Math.max(margin, Math.min(currentX, maxX));
-                currentY = Math.max(margin, Math.min(currentY, maxY));
-
-                element.style.left = currentX + 'px';
-                element.style.top = currentY + 'px';
-                element.style.right = 'auto';
-                element.style.bottom = 'auto';
-            }
-        }
-
-        function dragEnd(e) {
-            if (isDragging) {
-                isDragging = false;
-
-                // Re-enable pointer events on iframe
-                if (bubbleIframe) bubbleIframe.style.pointerEvents = 'auto';
-                element.style.cursor = 'grab';
-
-                // Save position
-                const rect = element.getBoundingClientRect();
-                chrome.storage.local.set({
-                    'nexa.bubble.pos': {
-                        x: rect.left,
-                        y: rect.top,
-                        right: window.innerWidth - rect.right,
-                        bottom: window.innerHeight - rect.bottom
-                    }
-                });
-                
-                hasMoved = false;
-            } else if (!hasMoved) {
-                // No drag happened - this was a click, let it pass through to iframe
-                // The click will be handled by the bubble's click handler
-            }
-        }
-    }
-
-    // Setup message listeners
-    function setupMessageListeners() {
-        // Listen for messages from iframe
-        window.addEventListener('message', (event) => {
-            // Verify origin is our extension
-            if (event.source !== bubbleIframe.contentWindow) return;
-
-            const message = event.data;
-
-            if (message.type === 'expand') {
-                bubbleContainer.style.width = '400px';
-                bubbleContainer.style.height = '600px';
-                bubbleIframe.style.borderRadius = '16px';
-            }
-
-            if (message.type === 'collapse') {
-                bubbleContainer.style.width = '64px';
-                bubbleContainer.style.height = '64px';
-                bubbleIframe.style.borderRadius = '50%';
-            }
-
-            if (message.type === 'persistPosition') {
-                try {
-                    const rect = bubbleContainer.getBoundingClientRect();
-                    chrome.storage.local.set({
-                        'nexa.bubble.pos': {
-                            x: rect.left,
-                            y: rect.top,
-                            right: window.innerWidth - rect.right,
-                            bottom: window.innerHeight - rect.bottom
-                        }
+        // Fetch tasks via service worker to avoid CORS issues
+        safeSendMessage({ type: 'fetch_tasks' }, (response) => {
+          if (!response || !response.ok) {
+            // Silently fail - tasks endpoint might not be available or user not authenticated
+            return;
+          }
+          
+          const data = response.data;
+          if (!data) return;
+          
+          const tasks = Array.isArray(data) ? data : (Array.isArray(data.data) ? data.data : []);
+          if (tasks.length === 0) return;
+          
+          const now = new Date();
+          const upcomingTasks = [];
+          
+          tasks.forEach(task => {
+            if (task && task.dueDate && !task.completed) {
+              try {
+                const dueDate = new Date(task.dueDate);
+                if (!isNaN(dueDate.getTime())) {
+                  const hoursUntilDue = (dueDate - now) / (1000 * 60 * 60);
+                  
+                  // Show notification if task is due within 24 hours and not overdue
+                  if (hoursUntilDue <= 24 && hoursUntilDue >= 0) {
+                    const daysUntilDue = hoursUntilDue / 24;
+                    upcomingTasks.push({
+                      id: task._id || task.id,
+                      title: task.title || 'Untitled Task',
+                      dueDate: task.dueDate,
+                      hoursUntilDue: hoursUntilDue,
+                      daysUntilDue: daysUntilDue
                     });
-                } catch (e) {
-                    console.error('Error persisting position:', e);
+                  }
                 }
+              } catch (err) {
+                console.error('Error processing task:', err);
+              }
             }
-
-            if (message.type === 'requestSelection') {
-                bubbleIframe.contentWindow.postMessage({
-                    type: 'selection',
-                    text: currentSelection
-                }, '*');
-            }
-
-            if (message.type === 'openLogin') {
-                chrome.runtime.openOptionsPage();
-            }
-            
-            if (message.type === 'openChat' || message.type === 'openSidePanel') {
-                // Open side panel for chat
-                chrome.runtime.sendMessage({
-                    type: 'open_side_panel'
-                }, () => {
-                    if (chrome.runtime.lastError) {
-                        console.error('Error opening side panel:', chrome.runtime.lastError);
-                    }
-                });
-            }
-            
-            // Forward messages from iframe to service worker
-            if (message.type === 'extensionMessage') {
-                const messageId = message.payload.id || Date.now();
-                console.log('Content script forwarding message:', message.payload.type, 'ID:', messageId);
-                
-                try {
-                    chrome.runtime.sendMessage(message.payload, (response) => {
-                        if (chrome.runtime.lastError) {
-                            console.error('Service worker error:', chrome.runtime.lastError);
-                            if (bubbleIframe && bubbleIframe.contentWindow) {
-                                bubbleIframe.contentWindow.postMessage({
-                                    type: 'extensionResponse',
-                                    id: messageId,
-                                    error: chrome.runtime.lastError.message
-                                }, '*');
-                            }
-                        } else {
-                            console.log('Content script received response from service worker:', response);
-                            if (bubbleIframe && bubbleIframe.contentWindow) {
-                                bubbleIframe.contentWindow.postMessage({
-                                    type: 'extensionResponse',
-                                    id: messageId,
-                                    response: response || {}
-                                }, '*');
-                            }
-                        }
-                    });
-                } catch (e) {
-                    console.error('Error sending message to service worker:', e);
-                    if (bubbleIframe && bubbleIframe.contentWindow) {
-                        bubbleIframe.contentWindow.postMessage({
-                            type: 'extensionResponse',
-                            id: messageId,
-                            error: 'Extension context invalidated. Please reload the page.'
-                        }, '*');
-                    }
-                }
-            }
-            
-            // Handle storage operations from iframe
-            if (message.type === 'storageGet') {
-                chrome.storage.local.get(message.keys, (result) => {
-                    bubbleIframe.contentWindow.postMessage({
-                        type: 'storageResult',
-                        data: result
-                    }, '*');
-                });
-            }
-            
-            if (message.type === 'storageSet') {
-                chrome.storage.local.set(message.data, () => {
-                    bubbleIframe.contentWindow.postMessage({
-                        type: 'storageResult',
-                        success: true
-                    }, '*');
-                });
-            }
-            
-            if (message.type === 'storageRemove') {
-                chrome.storage.local.remove(message.keys, () => {
-                    bubbleIframe.contentWindow.postMessage({
-                        type: 'storageResult',
-                        success: true
-                    }, '*');
-                });
-            }
+          });
+          
+          // Show notification for the most urgent task
+          if (upcomingTasks.length > 0) {
+            // Sort by urgency (soonest first)
+            upcomingTasks.sort((a, b) => a.hoursUntilDue - b.hoursUntilDue);
+            showTaskNotification(upcomingTasks[0]);
+          }
         });
-
-        // Listen for messages from service worker (context menu)
-        chrome.runtime.onMessage.addListener((message) => {
-            if (message.action === 'nexa_summarize' && message.text) {
-                currentSelection = message.text;
-                bubbleIframe.contentWindow.postMessage({
-                    type: 'summarize',
-                    text: message.text
-                }, '*');
-            }
-        });
+      });
+    } catch (error) {
+      // Silently fail
+      console.log('Task check error:', error.message);
     }
-
-    // Detect text selection
-    document.addEventListener('mouseup', (e) => {
-        // Don't trigger if clicking inside bubble
-        if (bubbleContainer && bubbleContainer.contains(e.target)) return;
-
-        const selection = window.getSelection().toString().trim();
-        if (selection.length > 8) {
-            currentSelection = selection;
-
-            // Auto-expand bubble if not already expanded
-            if (bubbleIframe && bubbleIframe.contentWindow) {
-                // First show the bubble if hidden
-                bubbleContainer.style.display = 'block';
-
-                // Send selection to bubble
-                bubbleIframe.contentWindow.postMessage({
-                    type: 'summarize', // Auto-switch to summarize tab
-                    text: selection
-                }, '*');
-            }
-        }
-    });
-
-    // Initialize bubble - ALWAYS create it by default
-    function initBubble() {
-        // Check if bubble is enabled (default to true)
-        chrome.storage.local.get(['nexa.bubble.enabled'], (result) => {
-            const enabled = result['nexa.bubble.enabled'] !== false; // Default to true
-            
-            if (!enabled) {
-                console.log('Nexa bubble is disabled');
-                return;
-            }
-            
-            function tryCreate() {
-                if (document.body && (!bubbleContainer || !document.body.contains(bubbleContainer))) {
-                    console.log('Attempting to create bubble...');
-                    createBubble();
-                    return true;
-                }
-                return false;
-            }
-            
-            // Try immediately
-            if (document.body) {
-                setTimeout(() => {
-                    const created = tryCreate();
-                    if (created) console.log('Bubble created on first try');
-                }, 50);
-            }
-            
-            // Wait for DOM
-            if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', () => {
-                    setTimeout(() => {
-                        const created = tryCreate();
-                        if (created) console.log('Bubble created after DOMContentLoaded');
-                    }, 100);
-                });
-            } else {
-                setTimeout(() => {
-                    const created = tryCreate();
-                    if (created) console.log('Bubble created after readyState check');
-                }, 100);
-            }
-            
-            // Observer fallback
-            const obs = new MutationObserver(() => {
-                if (tryCreate()) {
-                    console.log('Bubble created via MutationObserver');
-                    obs.disconnect();
-                }
-            });
-            obs.observe(document.documentElement, { childList: true, subtree: true });
-            setTimeout(() => { 
-                obs.disconnect(); 
-                const created = tryCreate();
-                if (created) console.log('Bubble created via timeout fallback');
-                else console.warn('Bubble creation failed after all attempts');
-            }, 2000);
-        });
+  }
+  
+  function showTaskNotification(task) {
+    // Remove existing notification if any
+    if (taskNotification) {
+      taskNotification.remove();
+      taskNotification = null;
     }
     
-    // Start immediately
-    console.log('Nexa: Initializing bubble...');
-    initBubble();
+    // Calculate time remaining
+    const hours = Math.floor(task.hoursUntilDue);
+    const minutes = Math.floor((task.hoursUntilDue - hours) * 60);
+    let timeText = '';
+    if (task.daysUntilDue < 1) {
+      if (hours > 0) {
+        timeText = `Due in ${hours} hour${hours > 1 ? 's' : ''}`;
+      } else {
+        timeText = `Due in ${minutes} minute${minutes > 1 ? 's' : ''}`;
+      }
+      if (hours === 0 && minutes === 0) {
+        timeText = 'Due today';
+      }
+    } else {
+      timeText = `Due in ${Math.ceil(task.daysUntilDue)} day${Math.ceil(task.daysUntilDue) > 1 ? 's' : ''}`;
+    }
     
-    // Listen for enable/disable changes
-    chrome.storage.onChanged.addListener((changes, areaName) => {
-        if (areaName === 'local' && changes['nexa.bubble.enabled'] && bubbleContainer) {
-            const enabled = changes['nexa.bubble.enabled'].newValue !== false;
-            bubbleContainer.style.display = enabled ? 'block' : 'none';
-        }
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = 'nexa-task-notification';
+    notification.innerHTML = `
+      <div class="notification-content">
+        <div class="notification-icon">⏰</div>
+        <div class="notification-text">
+          <div class="notification-title">${escapeHtml(task.title)}</div>
+          <div class="notification-time">${timeText}</div>
+        </div>
+        <button class="notification-close" aria-label="Close">×</button>
+      </div>
+    `;
+    
+    // Position notification above bubble (centered horizontally)
+    const bubbleRect = bubble.getBoundingClientRect();
+    const bubbleCenterX = bubbleRect.left + bubbleRect.width / 2;
+    notification.style.cssText = `
+      position: fixed;
+      bottom: ${window.innerHeight - bubbleRect.top + 10}px;
+      left: ${bubbleCenterX}px;
+      transform: translateX(-50%);
+      z-index: 2147483648;
+      pointer-events: auto;
+      animation: notificationSlideIn 0.3s ease-out;
+    `;
+    
+    // Add click handler to open tasks
+    notification.addEventListener('click', (e) => {
+      if (!e.target.classList.contains('notification-close')) {
+        safeSendMessage({
+          type: 'open_side_panel',
+          page: 'tasks'
+        });
+        notification.remove();
+        taskNotification = null;
+      }
     });
+    
+    // Close button handler
+    const closeBtn = notification.querySelector('.notification-close');
+    closeBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      notification.remove();
+      taskNotification = null;
+    });
+    
+    // Add to page
+    document.body.appendChild(notification);
+    taskNotification = notification;
+    
+    // Auto-dismiss after 10 seconds
+    setTimeout(() => {
+      if (taskNotification === notification) {
+        notification.style.animation = 'notificationSlideOut 0.3s ease-in';
+        setTimeout(() => {
+          if (notification.parentNode) {
+            notification.remove();
+          }
+          if (taskNotification === notification) {
+            taskNotification = null;
+          }
+        }, 300);
+      }
+    }, 10000);
+  }
+  
+  // Helper function to escape HTML
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+  
+  // Start task checking (check immediately, then every minute)
+  checkUpcomingTasks();
+  taskCheckInterval = setInterval(checkUpcomingTasks, 60000); // Check every minute
+  
+  function disableTextSelectionMode() {
+    textSelectionMode = false;
+    if (selectionHandler) {
+      document.removeEventListener('mouseup', selectionHandler, true);
+      selectionHandler = null;
+    }
+    
+    // Remove indicator if still present
+    const indicator = document.getElementById('nexa-selection-indicator');
+    if (indicator) {
+      indicator.remove();
+    }
+  }
+
+  // Listen for messages from service worker and settings
+  if (isExtensionContextValid()) {
+    try {
+      chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+        if (message && message.type === 'text_selected') {
+          // Handle text selection if needed
+          console.log('Text selected:', message.text);
+        }
+        
+        if (message && message.type === 'disable_text_selection') {
+          disableTextSelectionMode();
+        }
+        
+        if (message && message.type === 'bubble_enabled_changed') {
+          // Handle bubble enable/disable from settings
+          if (message.enabled) {
+            bubble.style.display = 'flex';
+            bubble.style.opacity = '1';
+            bubble.style.pointerEvents = 'auto';
+          } else {
+            bubble.style.display = 'none';
+            semi.style.display = 'none';
+          }
+        }
+        
+        if (message && message.type === 'bubble_icon_changed') {
+          // Handle bubble icon change from settings
+          const iconMap = {
+            'bot': '🤖',
+            'sparkles': '✨',
+            'zap': '⚡',
+            'circle': '●'
+          };
+          const iconEmoji = iconMap[message.icon] || 'N';
+          bubble.querySelector('.inner').textContent = iconEmoji;
+        }
+        
+        if (message && message.type === 'language_changed') {
+          // Handle language change - could trigger page reload or UI update
+          console.log('Language changed to:', message.language);
+        }
+        
+        return true; // Keep channel open for async responses
+      });
+    } catch (e) {
+      console.warn('Failed to set up message listener:', e);
+    }
+  }
+  
+  // Check bubble enabled state on load
+  safeStorageGet(['nexa.bubble.enabled'], (result) => {
+    const isEnabled = result && result['nexa.bubble.enabled'] !== false;
+    if (!isEnabled) {
+      bubble.style.display = 'none';
+      semi.style.display = 'none';
+    }
+  });
+  
+  // Check bubble icon on load
+  safeStorageGet(['nexa.bubble.icon'], (result) => {
+    const icon = result && result['nexa.bubble.icon'] || 'bot';
+    const iconMap = {
+      'bot': '🤖',
+      'sparkles': '✨',
+      'zap': '⚡',
+      'circle': '●'
+    };
+    const iconEmoji = iconMap[icon] || 'N';
+    if (bubble.querySelector('.inner')) {
+      bubble.querySelector('.inner').textContent = iconEmoji;
+    }
+  });
+
 })();

@@ -97,9 +97,11 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
       <div className="w-full max-w-md p-8 rounded-2xl bg-white/5 border border-white/10 shadow-lg overflow-visible">
-        <h2 className="text-4xl font-bold text-center mb-2 heading-gradient leading-tight py-1 overflow-visible">
-          {t('auth.login.title')}
-        </h2>
+        <div className="text-center mb-2">
+          <h2 className="text-4xl font-bold heading-gradient leading-tight py-1 overflow-visible inline-block">
+            {t('auth.login.title')}
+          </h2>
+        </div>
         <p className="text-center text-gray-400 mb-8">{t('auth.login.subtitle')}</p>
 
         {error && (

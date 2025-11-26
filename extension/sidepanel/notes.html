@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nexa Chat</title>
+    <title>Quick Notes - Nexa</title>
     <style>
         * {
             margin: 0;
@@ -36,8 +36,7 @@
             background-clip: text;
         }
         
-        
-        .messages {
+        .content {
             flex: 1;
             overflow-y: auto;
             padding: 16px;
@@ -46,93 +45,24 @@
             gap: 16px;
         }
         
-        .message {
-            padding: 12px 16px;
-            border-radius: 12px;
-            max-width: 85%;
-            word-wrap: break-word;
-            line-height: 1.5;
-        }
-        
-        .message.user {
-            background: rgba(0, 179, 255, 0.2);
-            border: 1px solid rgba(0, 179, 255, 0.3);
-            align-self: flex-end;
-            margin-left: auto;
-        }
-        
-        .message.ai {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            align-self: flex-start;
-        }
-        
-        .input-area {
-            padding: 16px;
-            border-top: 1px solid rgba(255, 255, 255, 0.1);
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(10px);
-        }
-        
-        /* Mode Toggle Above Input */
-        .mode-toggle-container {
+        /* Input Area */
+        .input-section {
             display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-            padding: 4px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 8px;
-        }
-        
-        .mode-toggle-btn {
-            flex: 1;
-            padding: 8px 12px;
-            background: transparent;
-            border: 1px solid transparent;
-            border-radius: 6px;
-            color: #9ca3af;
-            font-size: 13px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-        }
-        
-        .mode-toggle-btn:hover {
-            background: rgba(255, 255, 255, 0.05);
-            color: #fff;
-        }
-        
-        .mode-toggle-btn.active {
-            background: rgba(147, 51, 234, 0.3);
-            border-color: rgba(147, 51, 234, 0.5);
-            color: #a855f7;
-        }
-        
-        .mode-toggle-btn span {
-            font-size: 16px;
-        }
-        
-        .input-group {
-            display: flex;
-            gap: 8px;
+            flex-direction: column;
+            gap: 12px;
         }
         
         textarea {
-            flex: 1;
+            width: 100%;
+            min-height: 100px;
             padding: 12px;
             background: rgba(255, 255, 255, 0.05);
             border: 1px solid rgba(255, 255, 255, 0.1);
             border-radius: 8px;
             color: #fff;
-            resize: none;
             font-family: inherit;
             font-size: 14px;
-            min-height: 44px;
-            max-height: 120px;
+            resize: vertical;
         }
         
         textarea:focus {
@@ -140,7 +70,11 @@
             border-color: #00b3ff;
         }
         
-        button {
+        textarea::placeholder {
+            color: #6b7280;
+        }
+        
+        .save-btn {
             padding: 12px 20px;
             background: linear-gradient(to right, #00b3ff, #9b5cff);
             border: none;
@@ -149,28 +83,119 @@
             font-weight: 600;
             cursor: pointer;
             font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
             transition: opacity 0.2s;
         }
         
-        button:hover:not(:disabled) {
+        .save-btn:hover:not(:disabled) {
             opacity: 0.9;
         }
         
-        button:disabled {
+        .save-btn:disabled {
             opacity: 0.5;
             cursor: not-allowed;
         }
         
+        .save-btn.saved {
+            background: linear-gradient(to right, #22c55e, #16a34a);
+        }
+        
+        /* Notes List */
+        .notes-section {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 16px;
+        }
+        
+        .notes-section h2 {
+            font-size: 14px;
+            color: #9ca3af;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .notes-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .note-item {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            transition: background 0.2s;
+        }
+        
+        .note-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .note-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .note-title {
+            font-weight: 600;
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+        
+        .note-text {
+            color: #9ca3af;
+            font-size: 12px;
+            line-height: 1.4;
+            word-break: break-word;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        
+        .note-delete {
+            flex-shrink: 0;
+            padding: 6px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 14px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .note-delete:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        
         .empty-state {
             text-align: center;
-            color: #9ca3af;
+            color: #6b7280;
             padding: 40px 20px;
+            font-size: 14px;
         }
         
         .loading {
+            text-align: center;
+            color: #9ca3af;
+            padding: 20px;
+            font-size: 14px;
+        }
+        
+        .spinner {
             display: inline-block;
             width: 16px;
             height: 16px;
@@ -178,27 +203,11 @@
             border-top-color: #fff;
             border-radius: 50%;
             animation: spin 0.6s linear infinite;
+            margin-right: 8px;
         }
         
         @keyframes spin {
             to { transform: rotate(360deg); }
-        }
-        
-        .history-btn {
-            position: absolute;
-            top: 16px;
-            right: 16px;
-            padding: 8px;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            cursor: pointer;
-            color: #9ca3af;
-        }
-        
-        .history-btn:hover {
-            color: #fff;
-            background: rgba(255, 255, 255, 0.1);
         }
         
         /* Login Form Styles */
@@ -287,14 +296,14 @@
             font-size: 14px;
         }
         
-        .chat-content {
+        .notes-content {
             flex: 1;
             display: flex;
             flex-direction: column;
             overflow: hidden;
         }
         
-        .chat-content.hidden {
+        .notes-content.hidden {
             display: none;
         }
         
@@ -302,46 +311,36 @@
             display: none;
         }
         
-        .user-info {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 8px 16px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        /* Scrollbar styling */
+        .notes-list::-webkit-scrollbar {
+            width: 6px;
         }
         
-        .user-email {
-            color: #9ca3af;
-            font-size: 12px;
+        .notes-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
         }
         
-        .logout-btn {
-            padding: 6px 12px;
-            font-size: 12px;
-            background: rgba(239, 68, 68, 0.2);
-            color: #ef4444;
+        .notes-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        .notes-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div id="user-info" class="user-info hidden">
-            <div>
-                <h1 style="margin: 0; font-size: 18px;">Nexa Chat</h1>
-                <div id="user-email" class="user-email"></div>
-            </div>
-            <button id="logout-btn" class="logout-btn">Logout</button>
-        </div>
-        <div id="header-content">
-            <h1 data-translate="bubble.panels.summarize.title">AI Chat & Summarizer</h1>
-        </div>
+        <h1 data-translate="bubble.panels.quicknotes.title">📋 Quick Notes</h1>
     </div>
     
     <!-- Login Form -->
     <div id="login-form" class="login-form hidden">
         <div class="login-content">
             <h2>Login to Nexa</h2>
-            <p class="login-subtitle">Sign in to use AI chat and features</p>
+            <p class="login-subtitle">Sign in to use Quick Notes</p>
             <div class="form-group">
                 <label for="login-email">Email</label>
                 <input type="email" id="login-email" placeholder="Enter your email" required>
@@ -351,7 +350,7 @@
                 <input type="password" id="login-password" placeholder="Enter your password" required>
             </div>
             <div id="login-error" class="error-message hidden"></div>
-            <button id="login-submit-btn" class="login-btn">Login</button>
+            <button id="login-submit-btn" class="save-btn login-btn">Login</button>
             <p class="login-footer">
                 Don't have an account? 
                 <a href="https://nexa-nu-three.vercel.app/register" target="_blank">Sign up</a>
@@ -359,40 +358,31 @@
         </div>
     </div>
     
-    <!-- Chat Content -->
-    <div id="chat-content" class="chat-content">
-        <div class="messages" id="messages">
-            <div class="empty-state">
-                <p>Start a conversation or paste text to summarize</p>
-            </div>
-        </div>
-        
-        <div class="input-area">
-            <!-- Mode Toggle: Chat or Summarizer -->
-            <div class="mode-toggle-container">
-                <button class="mode-toggle-btn active" id="mode-chat" data-mode="chat">
-                    <span>💬</span> Chat
-                </button>
-                <button class="mode-toggle-btn" id="mode-summarize" data-mode="summarize">
-                    <span>📝</span> Summarize
-                </button>
-            </div>
-            <div class="input-group">
+    <!-- Notes Content -->
+    <div id="notes-content" class="notes-content">
+        <div class="content">
+            <div class="input-section">
                 <textarea 
-                    id="input" 
-                    placeholder="Type your message or paste text to summarize..."
-                    rows="1"
+                    id="note-input" 
+                    placeholder="Write your note here..."
+                    rows="4"
                 ></textarea>
-                <button id="send-btn">
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                        <path d="M2 2L14 8L2 14V9L10 8L2 7V2Z"/>
-                    </svg>
-                </button>
+                <button id="save-btn" class="save-btn">Save Note</button>
+            </div>
+            
+            <div class="notes-section">
+                <h2>Your Notes</h2>
+                <div id="notes-list" class="notes-list">
+                    <div class="loading">
+                        <span class="spinner"></span>Loading notes...
+                    </div>
+                </div>
             </div>
         </div>
     </div>
     
     <script src="translations.js"></script>
-    <script src="chat.js"></script>
+    <script src="notes.js"></script>
 </body>
 </html>
+

@@ -14,8 +14,6 @@
     ],
     "host_permissions": [
         "<all_urls>",
-        "http://localhost:5173/*",
-        "http://localhost:4000/*",
         "https://nexa-yp12.onrender.com/*",
         "https://nexa-nu-three.vercel.app/*"
     ],
@@ -37,9 +35,9 @@
             "all_frames": false
         }
     ],
-    "side_panel": {
-        "default_path": "sidepanel/chat.html"
-    },
+  "side_panel": {
+    "default_path": "sidepanel/chat.html"
+  },
     "action": {
         "default_title": "Nexa AI Assistant"
     },

@@ -1,33 +1,267 @@
-/* Nexa Bubble Content Script Styles */
-#nexa-bubble-container {
-    position: fixed !important;
-    z-index: 2147483647 !important;
-    pointer-events: none !important;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+/* Nexa Bubble Styles - Simplified */
+#nexa-bubble {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4f46e5, #06b6d4);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.25);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  cursor: grab;
+  user-select: none;
+  transition: transform 0.2s ease;
 }
 
-#nexa-bubble-root {
-    pointer-events: auto !important;
-    position: relative !important;
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    user-select: none !important;
-    -webkit-user-select: none !important;
+#nexa-bubble:active {
+  cursor: grabbing;
+  transform: scale(0.95);
 }
 
-/* Prevent conflicts with page styles */
-#nexa-bubble-root * {
-    box-sizing: border-box !important;
-    margin: 0 !important;
-    padding: 0 !important;
+#nexa-bubble .inner {
+  font-weight: 700;
+  font-family: Arial, sans-serif;
+  font-size: 24px;
 }
 
-/* Ensure iframe is visible and can receive clicks */
-#nexa-bubble-root iframe {
-    display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
+/* Feature menu container - appears next to bubble */
+.nexa-menu {
+  position: fixed;
+  pointer-events: none;
+  z-index: 2147483646;
+  right: 0;
+  bottom: 0;
+  opacity: 0;
+  transition: opacity 200ms ease;
 }
 
+.nexa-menu.open {
+  opacity: 1;
+}
+
+/* Feature buttons arranged in a vertical list */
+.nexa-feature {
+  position: absolute;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: white;
+  color: #111827;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 16px rgba(2, 6, 23, 0.12);
+  pointer-events: auto;
+  opacity: 0;
+  transition: all 220ms ease;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  transform: scale(0.8);
+}
+
+.nexa-feature:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(2, 6, 23, 0.25);
+  z-index: 10;
+}
+
+/* Features appear to the LEFT of bubble (when bubble is on right side) - stacking UP */
+.nexa-menu.left.up .nexa-feature.f1 { right: 80px; bottom: 10px; transition-delay: 0ms; }
+.nexa-menu.left.up .nexa-feature.f2 { right: 80px; bottom: 60px; transition-delay: 20ms; }
+.nexa-menu.left.up .nexa-feature.f3 { right: 80px; bottom: 110px; transition-delay: 40ms; }
+.nexa-menu.left.up .nexa-feature.f4 { right: 80px; bottom: 160px; transition-delay: 60ms; }
+.nexa-menu.left.up .nexa-feature.f5 { right: 80px; bottom: 210px; transition-delay: 80ms; }
+.nexa-menu.left.up .nexa-feature.f6 { right: 80px; bottom: 260px; transition-delay: 100ms; }
+.nexa-menu.left.up .nexa-feature.f7 { right: 80px; bottom: 310px; transition-delay: 120ms; }
+
+/* Features appear to the LEFT of bubble (when bubble is on right side) - stacking DOWN */
+.nexa-menu.left.down .nexa-feature.f1 { right: 80px; bottom: -10px; transition-delay: 0ms; }
+.nexa-menu.left.down .nexa-feature.f2 { right: 80px; bottom: -60px; transition-delay: 20ms; }
+.nexa-menu.left.down .nexa-feature.f3 { right: 80px; bottom: -110px; transition-delay: 40ms; }
+.nexa-menu.left.down .nexa-feature.f4 { right: 80px; bottom: -160px; transition-delay: 60ms; }
+.nexa-menu.left.down .nexa-feature.f5 { right: 80px; bottom: -210px; transition-delay: 80ms; }
+.nexa-menu.left.down .nexa-feature.f6 { right: 80px; bottom: -260px; transition-delay: 100ms; }
+.nexa-menu.left.down .nexa-feature.f7 { right: 80px; bottom: -310px; transition-delay: 120ms; }
+
+/* Features appear to the RIGHT of bubble (when bubble is on left side) - stacking UP */
+.nexa-menu.right.up .nexa-feature.f1 { right: -80px; bottom: 10px; transition-delay: 0ms; }
+.nexa-menu.right.up .nexa-feature.f2 { right: -80px; bottom: 60px; transition-delay: 20ms; }
+.nexa-menu.right.up .nexa-feature.f3 { right: -80px; bottom: 110px; transition-delay: 40ms; }
+.nexa-menu.right.up .nexa-feature.f4 { right: -80px; bottom: 160px; transition-delay: 60ms; }
+.nexa-menu.right.up .nexa-feature.f5 { right: -80px; bottom: 210px; transition-delay: 80ms; }
+.nexa-menu.right.up .nexa-feature.f6 { right: -80px; bottom: 260px; transition-delay: 100ms; }
+.nexa-menu.right.up .nexa-feature.f7 { right: -80px; bottom: 310px; transition-delay: 120ms; }
+
+/* Features appear to the RIGHT of bubble (when bubble is on left side) - stacking DOWN */
+.nexa-menu.right.down .nexa-feature.f1 { right: -80px; bottom: -10px; transition-delay: 0ms; }
+.nexa-menu.right.down .nexa-feature.f2 { right: -80px; bottom: -60px; transition-delay: 20ms; }
+.nexa-menu.right.down .nexa-feature.f3 { right: -80px; bottom: -110px; transition-delay: 40ms; }
+.nexa-menu.right.down .nexa-feature.f4 { right: -80px; bottom: -160px; transition-delay: 60ms; }
+.nexa-menu.right.down .nexa-feature.f5 { right: -80px; bottom: -210px; transition-delay: 80ms; }
+.nexa-menu.right.down .nexa-feature.f6 { right: -80px; bottom: -260px; transition-delay: 100ms; }
+.nexa-menu.right.down .nexa-feature.f7 { right: -80px; bottom: -310px; transition-delay: 120ms; }
+
+/* Visible state - features slide in and fade in */
+.nexa-menu.open .nexa-feature {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.nexa-feature span {
+  font-size: 14px;
+  pointer-events: none;
+  font-family: Arial, sans-serif;
+  font-weight: 600;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  #nexa-bubble {
+    width: 56px;
+    height: 56px;
+  }
+
+  .nexa-feature {
+    width: 40px;
+    height: 40px;
+    font-size: 12px;
+  }
+
+  /* Adjust spacing for mobile */
+  .nexa-menu.left.up .nexa-feature.f1 { right: 70px; bottom: 8px; }
+  .nexa-menu.left.up .nexa-feature.f2 { right: 70px; bottom: 54px; }
+  .nexa-menu.left.up .nexa-feature.f3 { right: 70px; bottom: 100px; }
+  .nexa-menu.left.up .nexa-feature.f4 { right: 70px; bottom: 146px; }
+  .nexa-menu.left.up .nexa-feature.f5 { right: 70px; bottom: 192px; }
+  .nexa-menu.left.up .nexa-feature.f6 { right: 70px; bottom: 238px; }
+  .nexa-menu.left.up .nexa-feature.f7 { right: 70px; bottom: 284px; }
+  
+  .nexa-menu.left.down .nexa-feature.f1 { right: 70px; bottom: -8px; }
+  .nexa-menu.left.down .nexa-feature.f2 { right: 70px; bottom: -54px; }
+  .nexa-menu.left.down .nexa-feature.f3 { right: 70px; bottom: -100px; }
+  .nexa-menu.left.down .nexa-feature.f4 { right: 70px; bottom: -146px; }
+  .nexa-menu.left.down .nexa-feature.f5 { right: 70px; bottom: -192px; }
+  .nexa-menu.left.down .nexa-feature.f6 { right: 70px; bottom: -238px; }
+  .nexa-menu.left.down .nexa-feature.f7 { right: 70px; bottom: -284px; }
+  
+  .nexa-menu.right.up .nexa-feature.f1 { right: -70px; bottom: 8px; }
+  .nexa-menu.right.up .nexa-feature.f2 { right: -70px; bottom: 54px; }
+  .nexa-menu.right.up .nexa-feature.f3 { right: -70px; bottom: 100px; }
+  .nexa-menu.right.up .nexa-feature.f4 { right: -70px; bottom: 146px; }
+  .nexa-menu.right.up .nexa-feature.f5 { right: -70px; bottom: 192px; }
+  .nexa-menu.right.up .nexa-feature.f6 { right: -70px; bottom: 238px; }
+  .nexa-menu.right.up .nexa-feature.f7 { right: -70px; bottom: 284px; }
+  
+  .nexa-menu.right.down .nexa-feature.f1 { right: -70px; bottom: -8px; }
+  .nexa-menu.right.down .nexa-feature.f2 { right: -70px; bottom: -54px; }
+  .nexa-menu.right.down .nexa-feature.f3 { right: -70px; bottom: -100px; }
+  .nexa-menu.right.down .nexa-feature.f4 { right: -70px; bottom: -146px; }
+  .nexa-menu.right.down .nexa-feature.f5 { right: -70px; bottom: -192px; }
+  .nexa-menu.right.down .nexa-feature.f6 { right: -70px; bottom: -238px; }
+  .nexa-menu.right.down .nexa-feature.f7 { right: -70px; bottom: -284px; }
+}
+
+/* Task Notification Popup */
+.nexa-task-notification {
+  min-width: 200px;
+  max-width: 280px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.notification-content {
+  background: rgba(249, 115, 22, 0.2);
+  border: 2px solid rgba(249, 115, 22, 0.5);
+  border-radius: 12px;
+  padding: 12px 14px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.notification-content:hover {
+  background: rgba(249, 115, 22, 0.3);
+  border-color: rgba(249, 115, 22, 0.7);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.4);
+}
+
+.notification-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.notification-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.notification-title {
+  color: #fff;
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notification-time {
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.notification-close {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.notification-close:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+@keyframes notificationSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes notificationSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px) scale(0.9);
+  }
+}

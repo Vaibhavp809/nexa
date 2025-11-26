@@ -36,10 +36,20 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 
 // Handle messages from content script and bubble iframe
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    console.log('Service worker received message:', message.type, message);
+    if (!message || typeof message !== 'object') {
+        console.warn('Invalid message received:', message);
+        return false;
+    }
+    
+    console.log('Service worker received message:', message.type || 'undefined', message);
 
     if (message.type === 'fetch_groq') {
         handleGroqRequest(message, sendResponse);
+        return true; // Keep channel open for async response
+    }
+
+    if (message.type === 'fetch_tasks') {
+        handleTasksRequest(message, sendResponse);
         return true; // Keep channel open for async response
     }
 
@@ -79,8 +89,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         return true;
     }
 
-    if (message.type === 'open_side_panel') {
-        // Open side panel for current tab
+                if (message.type === 'open_side_panel') {
+                    // Open side panel for current tab
+                    const page = message.page || 'chat';
+                    let sidePanelPath = 'sidepanel/chat.html';
+                    if (page === 'settings') {
+                        sidePanelPath = 'sidepanel/settings.html';
+                    } else if (page === 'translate') {
+                        sidePanelPath = 'sidepanel/translate.html';
+                    } else if (page === 'notes') {
+                        sidePanelPath = 'sidepanel/notes.html';
+                    } else if (page === 'tasks') {
+                        sidePanelPath = 'sidepanel/tasks.html';
+                    } else if (page === 'voicenotes') {
+                        sidePanelPath = 'sidepanel/voicenotes.html';
+                    } else if (page === 'voicesearch') {
+                        sidePanelPath = 'sidepanel/voicesearch.html';
+                    }
+        
+        // Update side panel path if needed
+        chrome.sidePanel.setOptions({
+            path: sidePanelPath,
+            enabled: true
+        });
+
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
             if (tabs && tabs.length > 0) {
                 chrome.sidePanel.open({ tabId: tabs[0].id }).then(() => {
@@ -107,10 +139,127 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         return true;
     }
+
+    if (message.type === 'feature_clicked' || (message.toSidePanel && !message.type)) {
+        // Handle feature clicks from bubble (compatible with both formats)
+        const feature = message.feature;
+        const label = message.label;
+        console.log('Feature clicked:', feature, label);
+        
+        if (feature) {
+            // Store last feature trigger (like reference)
+            chrome.storage.local.set({ lastFeature: feature });
+            
+            // Broadcast to all clients (like reference)
+            chrome.runtime.sendMessage({ from: 'background', feature: feature }).catch(() => {
+                // Ignore errors when broadcasting
+            });
+        }
+        
+        sendResponse({ success: true });
+        return true;
+    }
+    
+    if (message.type === 'text_selected' || message.type === 'text_selected_for_summarize') {
+        const selectedText = message.text;
+        const feature = message.feature || 'summarize';
+        
+        if (!selectedText || selectedText.trim().length === 0) {
+            console.warn('Text selection message received but text is empty');
+            sendResponse({ success: false, error: 'No text provided' });
+            return true;
+        }
+        
+        // Forward selected text to side panel via storage and message
+        chrome.storage.local.set({
+            nexa_selected_text: selectedText,
+            nexa_selected_feature: 'feat-summarize'
+        }, () => {
+            // Try to open chat side panel first if it's not already open
+            chrome.sidePanel.open({ windowId: sender.tab?.windowId });
+            
+            // Broadcast to side panel via tabs
+            chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+                if (tabs && tabs.length > 0) {
+                    chrome.tabs.sendMessage(tabs[0].id, {
+                        type: 'text_selected_for_sidepanel',
+                        text: selectedText,
+                        feature: feature
+                    }).catch(() => {
+                        // Side panel might not be open, that's okay - storage is the fallback
+                        console.log('Side panel may not be open yet, text saved to storage');
+                    });
+                }
+            });
+        });
+        
+        sendResponse({ success: true });
+        return true;
+    }
     
     // Return false if message not handled
     return false;
 });
+
+// Handle Tasks API requests
+async function handleTasksRequest(message, sendResponse) {
+    try {
+        // Get token from storage
+        const storage = await chrome.storage.local.get(['nexa_token', 'nexa_user']);
+        const token = storage.nexa_token;
+
+        if (!token) {
+            sendResponse({
+                ok: false,
+                error: 'Not authenticated',
+                needsAuth: true
+            });
+            return;
+        }
+
+        // Make request to backend (service worker context doesn't have CORS restrictions)
+        const response = await fetch(`${BACKEND_BASE}/api/tasks`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.status === 401) {
+            // Token expired or invalid
+            await chrome.storage.local.remove(['nexa_token']);
+            sendResponse({
+                ok: false,
+                error: 'Session expired',
+                needsAuth: true
+            });
+            return;
+        }
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            sendResponse({
+                ok: false,
+                error: errorData.message || `Server error: ${response.status}`
+            });
+            return;
+        }
+
+        const data = await response.json();
+        sendResponse({
+            ok: true,
+            data: data
+        });
+
+    } catch (error) {
+        console.error('Tasks request error:', error);
+        sendResponse({
+            ok: false,
+            error: error.message || 'Network error'
+        });
+    }
+}
 
 // Handle Groq API requests
 async function handleGroqRequest(message, sendResponse) {

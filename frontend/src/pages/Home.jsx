@@ -7,6 +7,16 @@ import { useTranslation } from '../hooks/useTranslation';
 export default function Home() {
   const { t } = useTranslation();
   
+  const handleDownloadExtension = () => {
+    // Create a temporary link element to trigger download
+    const link = document.createElement('a');
+    link.href = '/extension.zip';
+    link.download = 'nexa-extension.zip';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+  
   return (
     <div className="min-h-screen bg-black text-white pt-24 pb-12 px-6">
       <div className="max-w-7xl mx-auto">
@@ -86,7 +96,10 @@ export default function Home() {
               </div>
             </div>
             <div className="flex-shrink-0">
-              <button className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors">
+              <button 
+                onClick={handleDownloadExtension}
+                className="px-6 py-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold transition-colors"
+              >
                 {t('pages.home.extension.addToChrome')}
               </button>
             </div>

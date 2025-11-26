@@ -5,11 +5,43 @@ const LOGIN_URL = 'https://nexa-nu-three.vercel.app/';
 
 let currentMode = 'chat';
 let history = [];
+let currentLanguage = 'en';
+
+// Translation initialization
+async function initializeTranslations() {
+    try {
+        const result = await chrome.storage.local.get(['nexa.preferredLanguage']);
+        currentLanguage = result['nexa.preferredLanguage'] || 'en';
+        applyTranslations();
+        
+        // Listen for language changes
+        chrome.storage.onChanged.addListener((changes, areaName) => {
+            if (areaName === 'local' && changes['nexa.preferredLanguage']) {
+                currentLanguage = changes['nexa.preferredLanguage'].newValue || 'en';
+                applyTranslations();
+            }
+        });
+    } catch (error) {
+        console.error('Error initializing translations:', error);
+    }
+}
+
+function applyTranslations() {
+    const elements = document.querySelectorAll('[data-translate]');
+    elements.forEach(element => {
+        const key = element.getAttribute('data-translate');
+        if (key && typeof getTranslation === 'function') {
+            const translated = getTranslation(currentLanguage, key);
+            if (translated && translated !== key) {
+                element.textContent = translated;
+            }
+        }
+    });
+}
 
 const messagesEl = document.getElementById('messages');
 const inputEl = document.getElementById('input');
 const sendBtn = document.getElementById('send-btn');
-const modeBtns = document.querySelectorAll('.mode-btn');
 const loginForm = document.getElementById('login-form');
 const chatContent = document.getElementById('chat-content');
 const loginEmail = document.getElementById('login-email');
@@ -21,20 +53,174 @@ const userEmail = document.getElementById('user-email');
 const logoutBtn = document.getElementById('logout-btn');
 const headerContent = document.getElementById('header-content');
 
+// Mode toggle buttons (above input)
+const modeChatBtn = document.getElementById('mode-chat');
+const modeSummarizeBtn = document.getElementById('mode-summarize');
+
+// Listen for messages from background (features) and text selection
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!message || typeof message !== 'object') {
+        return false;
+    }
+    
+    // Handle feature clicks
+    if (message.feature || message.from === 'background') {
+        const feature = message.feature;
+        // If it's summarizer feature, switch to summarize mode
+        if (feature === 'feat-summarize' || feature === 'summarize' || message.mode === 'summarize') {
+            updateModeUI('summarize');
+        }
+        
+        const d = document.createElement('div');
+        d.className = 'message ai';
+        d.textContent = 'Feature triggered: ' + (feature || 'unknown');
+        messagesEl.appendChild(d);
+        messagesEl.scrollTop = messagesEl.scrollHeight;
+    }
+    
+    // Handle selected text for summarizer (multiple message type formats for compatibility)
+    if (message.type === 'text_selected_for_sidepanel' || 
+        message.type === 'selected_text' || 
+        message.type === 'text_selected') {
+        const text = message.text;
+        const feature = message.feature || 'summarize';
+        
+        if (text && feature === 'summarize' && inputEl) {
+            // Set the selected text in input box
+            inputEl.value = text;
+            // Switch to summarize mode
+            updateModeUI('summarize');
+            // Focus the input
+            inputEl.focus();
+            // Show a subtle notification
+            const notification = document.createElement('div');
+            notification.textContent = 'Text pasted! Click send to summarize.';
+            notification.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: rgba(76, 175, 80, 0.9);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 6px;
+                z-index: 10000;
+                font-size: 12px;
+                font-family: Arial, sans-serif;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+    }
+    
+    // Handle feature messages with mode
+    if (message.toSidePanel && message.mode === 'summarize') {
+        updateModeUI('summarize');
+    }
+    
+    return true;
+});
+
+// Also listen for text selection from storage (fallback if message didn't work)
+async function checkForSelectedText() {
+    try {
+        const result = await chrome.storage.local.get(['nexa_selected_text', 'nexa_selected_feature']);
+        if (result.nexa_selected_text && result.nexa_selected_feature === 'feat-summarize') {
+            if (inputEl && !inputEl.value) {
+                inputEl.value = result.nexa_selected_text;
+                updateModeUI('summarize');
+                inputEl.focus();
+                // Clear the stored text after using it
+                await chrome.storage.local.remove(['nexa_selected_text', 'nexa_selected_feature']);
+            }
+        }
+    } catch (error) {
+        console.error('Error checking for selected text:', error);
+    }
+}
+
+// Check for selected text on load and periodically
+checkForSelectedText();
+setTimeout(() => checkForSelectedText(), 500);
+setTimeout(() => checkForSelectedText(), 1000);
+setTimeout(() => checkForSelectedText(), 2000);
+
 // Initialize
 checkAuth();
+initializeTranslations();
 
-// Mode selection
-modeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        modeBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        currentMode = btn.dataset.mode;
-        inputEl.placeholder = currentMode === 'summarize' 
+// Check for selected text in storage when panel opens
+chrome.storage.local.get(['nexa_selected_text', 'nexa_selected_feature'], (result) => {
+    if (result.nexa_selected_text && result.nexa_selected_feature === 'feat-summarize') {
+        // Set the selected text in input box
+        if (inputEl) {
+            inputEl.value = result.nexa_selected_text;
+            // Switch to summarize mode
+            updateModeUI('summarize');
+            // Focus the input
+            setTimeout(() => {
+                inputEl.focus();
+                // Show notification
+                const notification = document.createElement('div');
+                notification.textContent = 'Text pasted! Click send to summarize.';
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 10px;
+                    right: 10px;
+                    background: rgba(76, 175, 80, 0.9);
+                    color: white;
+                    padding: 8px 16px;
+                    border-radius: 6px;
+                    z-index: 10000;
+                    font-size: 12px;
+                    font-family: Arial, sans-serif;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+                `;
+                document.body.appendChild(notification);
+                setTimeout(() => notification.remove(), 3000);
+            }, 300);
+        }
+        // Clear the stored text
+        chrome.storage.local.remove(['nexa_selected_text', 'nexa_selected_feature']);
+    }
+});
+
+// Mode selection - update UI based on mode
+const updateModeUI = (mode) => {
+    currentMode = mode;
+    
+    // Update toggle buttons
+    if (modeChatBtn && modeSummarizeBtn) {
+        modeChatBtn.classList.toggle('active', mode === 'chat');
+        modeSummarizeBtn.classList.toggle('active', mode === 'summarize');
+    }
+    
+    // Update placeholder
+    if (inputEl) {
+        inputEl.placeholder = mode === 'summarize' 
             ? 'Paste text to summarize...'
             : 'Type your message...';
+    }
+};
+
+// Mode toggle button handlers (above input box)
+if (modeChatBtn) {
+    modeChatBtn.addEventListener('click', () => {
+        updateModeUI('chat');
     });
-});
+}
+
+if (modeSummarizeBtn) {
+    modeSummarizeBtn.addEventListener('click', () => {
+        updateModeUI('summarize');
+    });
+}
+
+// Initialize mode to chat
+updateModeUI('chat');
+
+// Initialize mode
+updateModeUI('chat');
 
 // Check authentication
 async function checkAuth() {
@@ -333,4 +519,5 @@ inputEl.addEventListener('input', () => {
     inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
     sendBtn.disabled = !inputEl.value.trim();
 });
+
 

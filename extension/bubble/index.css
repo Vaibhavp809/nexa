@@ -9,7 +9,18 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', sans-serif;
     background: transparent;
     color: #fff;
-    overflow: hidden;
+    overflow: visible;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
+#bubble-app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: visible;
 }
 
 /* Utility classes */
@@ -41,6 +52,13 @@ body {
     height: 100%;
 }
 
+/* Bubble Container */
+#bubble-app {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
 /* Bubble Icon (collapsed state) */
 .bubble-icon {
     width: 64px;
@@ -53,9 +71,12 @@ body {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    position: relative;
+    position: absolute;
+    top: 0;
+    left: 0;
     transition: all 0.3s ease;
     box-shadow: 0 4px 20px rgba(0, 179, 255, 0.3);
+    z-index: 10;
 }
 
 .bubble-icon:hover {
@@ -90,6 +111,8 @@ body {
 .feature-panel {
     width: 400px;
     height: 600px;
+    min-width: 400px;
+    min-height: 600px;
     background: linear-gradient(135deg, rgba(15, 23, 42, 0.95), rgba(30, 41, 59, 0.95));
     backdrop-filter: blur(20px);
     border: 1px solid rgba(255, 255, 255, 0.1);
@@ -98,6 +121,10 @@ body {
     display: flex;
     flex-direction: column;
     overflow: hidden;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 20;
 }
 
 .panel-header {
@@ -119,6 +146,21 @@ body {
     flex: 1;
     overflow-y: auto;
     padding: 1rem;
+    color: white;
+}
+
+.panel-content * {
+    color: white;
+}
+
+.panel-content button {
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.panel-content button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 179, 255, 0.4);
 }
 
 /* Feature Menu (semicircle) */

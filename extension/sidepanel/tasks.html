@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasks - Nexa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            background: linear-gradient(to right, #00b3ff, #9b5cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        
+        /* Input Section */
+        .input-section {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #00b3ff;
+        }
+        
+        input[type="text"]::placeholder {
+            color: #6b7280;
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 60px;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 13px;
+            resize: vertical;
+        }
+        
+        textarea:focus {
+            outline: none;
+            border-color: #00b3ff;
+        }
+        
+        textarea::placeholder {
+            color: #6b7280;
+        }
+        
+        .date-time-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .date-time-field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .date-time-field label {
+            font-size: 11px;
+            color: #9ca3af;
+        }
+        
+        input[type="date"],
+        input[type="time"] {
+            width: 100%;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 13px;
+        }
+        
+        input[type="date"]:focus,
+        input[type="time"]:focus {
+            outline: none;
+            border-color: #00b3ff;
+        }
+        
+        .save-btn {
+            padding: 12px 20px;
+            background: linear-gradient(to right, #00b3ff, #9b5cff);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.2s;
+        }
+        
+        .save-btn:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+        
+        .save-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .save-btn.saved {
+            background: linear-gradient(to right, #22c55e, #16a34a);
+        }
+        
+        /* Tasks List */
+        .tasks-section {
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding-top: 16px;
+        }
+        
+        .tasks-section h2 {
+            font-size: 14px;
+            color: #9ca3af;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .tasks-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .task-item {
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            transition: background 0.2s;
+        }
+        
+        .task-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        
+        .task-item.completed {
+            opacity: 0.6;
+        }
+        
+        .task-checkbox {
+            flex-shrink: 0;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 4px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+            margin-top: 2px;
+        }
+        
+        .task-checkbox:hover {
+            border-color: #00b3ff;
+        }
+        
+        .task-checkbox.checked {
+            background: #22c55e;
+            border-color: #22c55e;
+        }
+        
+        .task-checkbox.checked::after {
+            content: '✓';
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        
+        .task-content {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .task-title {
+            font-weight: 600;
+            color: #fff;
+            font-size: 14px;
+            margin-bottom: 4px;
+            word-break: break-word;
+        }
+        
+        .task-item.completed .task-title {
+            text-decoration: line-through;
+            color: #9ca3af;
+        }
+        
+        .task-description {
+            color: #9ca3af;
+            font-size: 12px;
+            line-height: 1.4;
+            word-break: break-word;
+            margin-bottom: 6px;
+        }
+        
+        .task-due-date {
+            font-size: 11px;
+            color: #f97316;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .task-due-date.overdue {
+            color: #ef4444;
+        }
+        
+        .task-due-date.today {
+            color: #fbbf24;
+        }
+        
+        .task-actions {
+            flex-shrink: 0;
+            display: flex;
+            gap: 6px;
+        }
+        
+        .task-delete {
+            padding: 6px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 14px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s;
+        }
+        
+        .task-delete:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        
+        .empty-state {
+            text-align: center;
+            color: #6b7280;
+            padding: 40px 20px;
+            font-size: 14px;
+        }
+        
+        .loading {
+            text-align: center;
+            color: #9ca3af;
+            padding: 20px;
+            font-size: 14px;
+        }
+        
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 8px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        /* Login Form Styles */
+        .login-form {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-content {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .login-content h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #00b3ff, #9b5cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .login-subtitle {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #00b3ff;
+        }
+        
+        .login-btn {
+            width: 100%;
+            margin-top: 8px;
+        }
+        
+        .login-footer {
+            text-align: center;
+            margin-top: 16px;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .login-footer a {
+            color: #00b3ff;
+            text-decoration: none;
+        }
+        
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        .tasks-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .tasks-content.hidden {
+            display: none;
+        }
+        
+        .login-form.hidden {
+            display: none;
+        }
+        
+        /* Scrollbar styling */
+        .tasks-list::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .tasks-list::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+        
+        .tasks-list::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        .tasks-list::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 data-translate="bubble.panels.tasks.title">✅ Tasks & Reminders</h1>
+    </div>
+    
+    <!-- Login Form -->
+    <div id="login-form" class="login-form hidden">
+        <div class="login-content">
+            <h2>Login to Nexa</h2>
+            <p class="login-subtitle">Sign in to use Task Reminder</p>
+            <div class="form-group">
+                <label for="login-email">Email</label>
+                <input type="email" id="login-email" placeholder="Enter your email" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" placeholder="Enter your password" required>
+            </div>
+            <div id="login-error" class="error-message hidden"></div>
+            <button id="login-submit-btn" class="save-btn login-btn">Login</button>
+            <p class="login-footer">
+                Don't have an account? 
+                <a href="https://nexa-nu-three.vercel.app/register" target="_blank">Sign up</a>
+            </p>
+        </div>
+    </div>
+    
+    <!-- Tasks Content -->
+    <div id="tasks-content" class="tasks-content">
+        <div class="content">
+            <div class="input-section">
+                <input 
+                    type="text" 
+                    id="task-title" 
+                    placeholder="Task title..."
+                />
+                <textarea 
+                    id="task-description" 
+                    placeholder="Description (optional)..."
+                    rows="2"
+                ></textarea>
+                <div class="date-time-group">
+                    <div class="date-time-field">
+                        <label for="task-due-date">Due Date</label>
+                        <input type="date" id="task-due-date" />
+                    </div>
+                    <div class="date-time-field">
+                        <label for="task-due-time">Time</label>
+                        <input type="time" id="task-due-time" />
+                    </div>
+                </div>
+                <button id="save-btn" class="save-btn">Add Task</button>
+            </div>
+            
+            <div class="tasks-section">
+                <h2>Your Tasks</h2>
+                <div id="tasks-list" class="tasks-list">
+                    <div class="loading">
+                        <span class="spinner"></span>Loading tasks...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="translations.js"></script>
+    <script src="tasks.js"></script>
+</body>
+</html>
+

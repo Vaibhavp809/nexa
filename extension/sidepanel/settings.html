@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Settings - Nexa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            background: linear-gradient(to right, #00b3ff, #9b5cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        
+        .settings-section {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+        }
+        
+        .settings-section h2 {
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 16px;
+            font-weight: 600;
+        }
+        
+        .setting-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .setting-item:last-child {
+            border-bottom: none;
+        }
+        
+        .setting-label {
+            font-size: 14px;
+            color: #e5e7eb;
+        }
+        
+        .setting-description {
+            font-size: 12px;
+            color: #9ca3af;
+            margin-top: 4px;
+        }
+        
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.2);
+            transition: 0.3s;
+            border-radius: 24px;
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        
+        input:checked + .toggle-slider {
+            background: linear-gradient(to right, #00b3ff, #9b5cff);
+        }
+        
+        input:checked + .toggle-slider:before {
+            transform: translateX(24px);
+        }
+        
+        /* Language Select */
+        select {
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #00b3ff;
+        }
+        
+        select option {
+            background: #1f2937;
+            color: #fff;
+        }
+        
+        /* Bubble Icon Grid */
+        .icon-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-top: 12px;
+        }
+        
+        .icon-option {
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.2s;
+        }
+        
+        .icon-option:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .icon-option.selected {
+            border-color: #00b3ff;
+            background: rgba(0, 179, 255, 0.2);
+        }
+        
+        .icon-option .icon-emoji {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .icon-option .icon-label {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+        
+        .icon-option.selected .icon-label {
+            color: #00b3ff;
+        }
+        
+        /* Account Section */
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-top: 12px;
+        }
+        
+        .user-details {
+            flex: 1;
+        }
+        
+        .user-email {
+            font-size: 14px;
+            color: #fff;
+            margin-bottom: 4px;
+        }
+        
+        .user-status {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+        
+        .logout-btn {
+            padding: 8px 16px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+        
+        .logout-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            border-color: rgba(239, 68, 68, 0.5);
+        }
+        
+        /* Login Form */
+        .login-form {
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .login-content {
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .login-content h2 {
+            font-size: 24px;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #00b3ff, #9b5cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .login-subtitle {
+            color: #9ca3af;
+            font-size: 14px;
+            margin-bottom: 24px;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #00b3ff;
+        }
+        
+        .login-btn {
+            width: 100%;
+            margin-top: 8px;
+        }
+        
+        .login-footer {
+            text-align: center;
+            margin-top: 16px;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .login-footer a {
+            color: #00b3ff;
+            text-decoration: none;
+        }
+        
+        .login-footer a:hover {
+            text-decoration: underline;
+        }
+        
+        .error-message {
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            color: #ef4444;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        .settings-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .settings-content.hidden {
+            display: none;
+        }
+        
+        .login-form.hidden {
+            display: none;
+        }
+        
+        .info-text {
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+        
+        /* Scrollbar styling */
+        .content::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        .content::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 3px;
+        }
+        
+        .content::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 3px;
+        }
+        
+        .content::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>⚙️ Settings</h1>
+    </div>
+    
+    <!-- Login Form -->
+    <div id="login-form" class="login-form hidden">
+        <div class="login-content">
+            <h2>Login to Nexa</h2>
+            <p class="login-subtitle">Sign in to access settings</p>
+            <div class="form-group">
+                <label for="login-email">Email</label>
+                <input type="email" id="login-email" placeholder="Enter your email" required>
+            </div>
+            <div class="form-group">
+                <label for="login-password">Password</label>
+                <input type="password" id="login-password" placeholder="Enter your password" required>
+            </div>
+            <div id="login-error" class="error-message hidden"></div>
+            <button id="login-submit-btn" class="login-btn">Login</button>
+            <p class="login-footer">
+                Don't have an account? 
+                <a href="https://nexa-nu-three.vercel.app/register" target="_blank">Sign up</a>
+            </p>
+        </div>
+    </div>
+    
+    <!-- Settings Content -->
+    <div id="settings-content" class="settings-content">
+        <div class="content">
+            <!-- Bubble Settings -->
+            <div class="settings-section">
+                <h2 data-translate="settings.bubble.title">Floating Bubble</h2>
+                <div class="setting-item">
+                    <div>
+                        <div class="setting-label" data-translate="settings.bubble.enable">Enable Bubble</div>
+                        <div class="setting-description" data-translate="settings.bubble.description">Changes will reload the page to apply.</div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="bubble-enabled" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+            </div>
+            
+            <!-- Bubble Theme -->
+            <div class="settings-section">
+                <h2 data-translate="settings.bubbleTheme.title">Bubble Theme</h2>
+                <p class="setting-description" data-translate="settings.bubbleTheme.chooseIcon" style="margin-bottom: 12px;">Choose your bubble icon:</p>
+                <div class="icon-grid" id="icon-grid">
+                    <div class="icon-option selected" data-icon="bot">
+                        <div class="icon-emoji">🤖</div>
+                        <div class="icon-label">Bot</div>
+                    </div>
+                    <div class="icon-option" data-icon="sparkles">
+                        <div class="icon-emoji">✨</div>
+                        <div class="icon-label">Sparkles</div>
+                    </div>
+                    <div class="icon-option" data-icon="zap">
+                        <div class="icon-emoji">⚡</div>
+                        <div class="icon-label">Zap</div>
+                    </div>
+                    <div class="icon-option" data-icon="circle">
+                        <div class="icon-emoji">●</div>
+                        <div class="icon-label">Circle</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Language Settings -->
+            <div class="settings-section">
+                <h2 data-translate="settings.language.title">Language</h2>
+                <div class="setting-item">
+                    <div>
+                        <div class="setting-label" data-translate="settings.language.preferred">Preferred Language</div>
+                        <div class="setting-description">Select your preferred language for the extension</div>
+                    </div>
+                    <div style="display: flex; flex-direction: column; gap: 8px;">
+                        <select id="language-select">
+                            <option value="en">English</option>
+                            <option value="hi">हिंदी (Hindi)</option>
+                            <option value="mr">मराठी (Marathi)</option>
+                            <option value="kn">ಕನ್ನಡ (Kannada)</option>
+                        </select>
+                        <button id="save-language-btn" class="save-btn" style="padding: 8px 16px; font-size: 13px;">Save Language</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Account Section -->
+            <div class="settings-section">
+                <h2 data-translate="settings.account.title">Account</h2>
+                <div id="user-info" class="user-info">
+                    <div class="user-details">
+                        <div id="user-email" class="user-email"></div>
+                        <div class="user-status">Logged in</div>
+                    </div>
+                    <button id="logout-btn" class="logout-btn" data-translate="settings.account.signOut">Logout</button>
+                </div>
+            </div>
+            
+            <!-- Extension Info -->
+            <div class="settings-section">
+                <h2>About</h2>
+                <div class="info-text">
+                    Nexa AI Assistant extension provides quick access to AI-powered features on any webpage.
+                    <br><br>
+                    Version 1.0.0
+                    <br>
+                    <a href="https://nexa-nu-three.vercel.app" target="_blank" style="color: #00b3ff;">Visit Website</a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="translations.js"></script>
+    <script src="settings.js"></script>
+</body>
+</html>
+

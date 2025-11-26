@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Voice Search - Nexa</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .header {
+            padding: 16px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 20px;
+            background: linear-gradient(to right, #00b3ff, #9b5cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Recording Section */
+        .recording-section {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 12px;
+            padding: 20px;
+        }
+        
+        .record-button {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            border: 3px solid;
+            background: rgba(6, 182, 212, 0.2);
+            border-color: #06b6d4;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            transition: all 0.3s;
+            position: relative;
+        }
+        
+        .record-button:hover:not(:disabled) {
+            transform: scale(1.05);
+            box-shadow: 0 0 20px rgba(6, 182, 212, 0.5);
+        }
+        
+        .record-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .record-button.recording {
+            background: rgba(239, 68, 68, 0.2);
+            border-color: #ef4444;
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+            }
+        }
+        
+        .record-status {
+            font-size: 14px;
+            color: #9ca3af;
+            text-align: center;
+        }
+        
+        /* Search Input Section */
+        .search-section {
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        .search-input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        input[type="text"] {
+            flex: 1;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-family: inherit;
+            font-size: 14px;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #06b6d4;
+        }
+        
+        input[type="text"]::placeholder {
+            color: #6b7280;
+        }
+        
+        .search-btn {
+            padding: 12px 24px;
+            background: linear-gradient(to right, #06b6d4, #3b82f6);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            transition: opacity 0.2s;
+            white-space: nowrap;
+        }
+        
+        .search-btn:hover:not(:disabled) {
+            opacity: 0.9;
+        }
+        
+        .search-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .search-preview {
+            text-align: center;
+            padding: 12px;
+            background: rgba(6, 182, 212, 0.1);
+            border: 1px solid rgba(6, 182, 212, 0.3);
+            border-radius: 8px;
+            font-size: 13px;
+            color: #06b6d4;
+            display: none;
+        }
+        
+        .search-preview.show {
+            display: block;
+        }
+        
+        .mic-permission-prompt {
+            padding: 12px;
+            background: rgba(239, 68, 68, 0.1);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 8px;
+            margin-bottom: 16px;
+            text-align: center;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .mic-permission-prompt.hidden {
+            display: none;
+        }
+        
+        .mic-permission-prompt p {
+            font-size: 12px;
+            color: #ef4444;
+            margin-bottom: 8px;
+        }
+        
+        .request-mic-btn {
+            padding: 8px 16px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            border-radius: 6px;
+            color: #ef4444;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .info-text {
+            text-align: center;
+            color: #6b7280;
+            font-size: 13px;
+            max-width: 400px;
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1 data-translate="bubble.panels.voicesearch.title">🔍 Voice Search</h1>
+    </div>
+    
+    <div class="content">
+        <div class="mic-permission-prompt hidden" id="mic-permission-prompt">
+            <p>Microphone permission required for voice search</p>
+            <button id="request-mic-btn" class="request-mic-btn">Request Permission</button>
+        </div>
+        
+        <div class="recording-section">
+            <button id="record-btn" class="record-button" title="Click to search by voice">
+                🎤
+            </button>
+            <p id="record-status" class="record-status">Click to search by voice</p>
+        </div>
+        
+        <div class="search-section">
+            <div class="search-input-wrapper">
+                <input 
+                    type="text" 
+                    id="search-input" 
+                    placeholder="Or type search query..."
+                />
+                <button id="search-btn" class="search-btn">Search</button>
+            </div>
+            <div id="search-preview" class="search-preview"></div>
+            <p class="info-text">Search results will open in a new tab</p>
+        </div>
+    </div>
+    
+    <script src="translations.js"></script>
+    <script src="voicesearch.js"></script>
+</body>
+</html>
+
