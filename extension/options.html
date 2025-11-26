@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nexa Settings</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #000;
+            color: #fff;
+            padding: 40px;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            font-size: 32px;
+            margin-bottom: 8px;
+            background: linear-gradient(to right, #00b3ff, #9b5cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            color: #9ca3af;
+            margin-bottom: 32px;
+        }
+        
+        .card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+        
+        .card h2 {
+            font-size: 20px;
+            margin-bottom: 16px;
+            color: #fff;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        input[type="text"],
+        input[type="email"],
+        input[type="password"] {
+            width: 100%;
+            padding: 12px;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #00b3ff;
+        }
+        
+        button {
+            padding: 12px 24px;
+            background: linear-gradient(to right, #00b3ff, #9b5cff);
+            border: none;
+            border-radius: 8px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 14px;
+            width: 100%;
+            margin-top: 12px;
+        }
+        
+        button:hover {
+            opacity: 0.9;
+        }
+        
+        button.secondary {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        button.danger {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+        
+        .status {
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 14px;
+        }
+        
+        .status.success {
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        
+        .status.error {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        
+        .status.info {
+            background: rgba(59, 130, 246, 0.2);
+            color: #3b82f6;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+        }
+        
+        .user-info {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .user-details {
+            flex: 1;
+        }
+        
+        .user-email {
+            color: #9ca3af;
+            font-size: 14px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.1);
+            margin: 24px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Nexa Settings</h1>
+        <p class="subtitle">Manage your extension settings and authentication</p>
+        
+        <!-- Status Message -->
+        <div id="status" class="status hidden"></div>
+        
+        <!-- Authentication Section -->
+        <div class="card">
+            <h2>Authentication</h2>
+            
+            <!-- User Info (when logged in) -->
+            <div id="user-info" class="user-info hidden">
+                <div class="user-details">
+                    <div id="user-email" class="user-email"></div>
+                </div>
+                <button id="logout-btn" class="secondary danger">Logout</button>
+            </div>
+            
+            <!-- Login Form (when logged out) -->
+            <div id="login-form">
+                <div class="form-group">
+                    <label for="email">Email</label>
+                    <input type="email" id="email" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" placeholder="Enter your password" required>
+                </div>
+                <button id="login-btn">Login</button>
+                <p style="text-align: center; margin-top: 16px; color: #9ca3af; font-size: 14px;">
+                    Don't have an account? 
+                    <a href="https://nexa-nu-three.vercel.app/register" target="_blank" style="color: #00b3ff;">Sign up</a>
+                </p>
+            </div>
+        </div>
+        
+        <!-- Extension Settings -->
+        <div class="card">
+            <h2>Extension Settings</h2>
+            <div class="form-group">
+                <label>
+                    <input type="checkbox" id="enable-bubble" checked> Enable floating bubble
+                </label>
+            </div>
+            <div class="form-group">
+                <button id="reset-position" class="secondary">Reset Bubble Position</button>
+            </div>
+        </div>
+        
+        <!-- About -->
+        <div class="card">
+            <h2>About</h2>
+            <p style="color: #9ca3af; font-size: 14px; line-height: 1.6;">
+                Nexa AI Assistant extension provides quick access to AI-powered features 
+                on any webpage. Summarize content, translate text, take notes, and chat 
+                with AI - all without leaving your current page.
+            </p>
+            <div class="divider"></div>
+            <p style="color: #9ca3af; font-size: 12px;">
+                Version 1.0.0<br>
+                <a href="https://nexa-nu-three.vercel.app" target="_blank" style="color: #00b3ff;">Visit Website</a>
+            </p>
+        </div>
+    </div>
+    
+    <script src="options.js"></script>
+</body>
+</html>

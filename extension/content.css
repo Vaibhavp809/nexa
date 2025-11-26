@@ -1,0 +1,33 @@
+/* Nexa Bubble Content Script Styles */
+#nexa-bubble-container {
+    position: fixed !important;
+    z-index: 2147483647 !important;
+    pointer-events: none !important;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif !important;
+}
+
+#nexa-bubble-root {
+    pointer-events: auto !important;
+    position: relative !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+/* Prevent conflicts with page styles */
+#nexa-bubble-root * {
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* Ensure iframe is visible and can receive clicks */
+#nexa-bubble-root iframe {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+}
+

@@ -8,9 +8,10 @@
 </head>
 <body>
   <div id="bubble-app">
-    <!-- Collapsed state (circular icon) -->
-    <div id="bubble-icon" class="bubble-icon" role="button" tabindex="0" aria-label="Open Nexa Assistant" aria-expanded="false">
-      <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <!-- Main Bubble Icon (always visible) -->
+    <div id="bubble-icon" class="bubble-icon" role="button" tabindex="0" aria-label="Open Nexa Assistant">
+      <svg id="bubble-icon-svg" width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <!-- Bot icon -->
         <circle cx="16" cy="16" r="14" fill="url(#gradient)" opacity="0.2"/>
         <path d="M16 8C11.6 8 8 11.6 8 16C8 20.4 11.6 24 16 24C20.4 24 24 20.4 24 16C24 11.6 20.4 8 16 8ZM16 22C12.7 22 10 19.3 10 16C10 12.7 12.7 10 16 10C19.3 10 22 12.7 22 16C22 19.3 19.3 22 16 22Z" fill="url(#gradient)"/>
         <circle cx="16" cy="16" r="4" fill="url(#gradient)"/>
@@ -21,136 +22,31 @@
           </linearGradient>
         </defs>
       </svg>
-      <div class="pulse-ring"></div>
     </div>
+
+    <!-- Semicircle Menu (appears on click) -->
+    <div id="feature-menu" class="feature-menu hidden"></div>
+
+    <!-- Task Reminder Notification -->
+    <div id="task-notification" class="task-notification hidden"></div>
     
-    <!-- Expanded state (panel) -->
-    <div id="bubble-panel" class="bubble-panel hidden">
-      <!-- Header -->
-      <div class="bubble-header">
-        <div class="flex items-center gap-2">
-          <div class="nexa-logo">N</div>
-          <span class="font-bold">Nexa</span>
+    <!-- Feature Panel (expands when feature selected) -->
+    <div id="feature-panel" class="feature-panel hidden">
+      <!-- Panel Header -->
+      <div class="panel-header">
+        <div class="panel-title">
+          <svg id="panel-icon" width="20" height="20" viewBox="0 0 20 20" fill="currentColor"></svg>
+          <span id="panel-title-text">Nexa</span>
         </div>
-        <button id="close-btn" class="icon-btn" aria-label="Collapse">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M15 10L5 10M10 5L10 15" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <button id="close-panel-btn" class="icon-btn" aria-label="Close panel">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M12 4L4 12M4 4l8 8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
           </svg>
         </button>
       </div>
       
-      <!-- Tabs -->
-      <div class="tabs">
-        <button class="tab active" data-tab="chat" aria-label="Chat">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M6 10C6 9.44772 6.44772 9 7 9H13C13.5523 9 14 9.44772 14 10C14 10.5523 13.5523 11 13 11H7C6.44772 11 6 10.5523 6 10Z"/>
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M2 6C2 4.34315 3.34315 3 5 3H15C16.6569 3 18 4.34315 18 6V12C18 13.6569 16.6569 15 15 15H11L7 18V15H5C3.34315 15 2 13.6569 2 12V6Z"/>
-          </svg>
-        </button>
-        <button class="tab" data-tab="summarize" aria-label="Summarize">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M4 4H16V6H4V4ZM4 8H16V10H4V8ZM4 12H12V14H4V12Z"/>
-          </svg>
-        </button>
-        <button class="tab" data-tab="translate" aria-label="Translate">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M7 2H3V6H5V4H7V2ZM13 2V4H15V6H17V2H13ZM3 14V18H7V16H5V14H3ZM17 14V16H15V18H13V14H17ZM10 7L8 13H10L10.5 11.5H13.5L14 13H16L14 7H10ZM11 10L12 7.5L13 10H11Z"/>
-          </svg>
-        </button>
-        <button class="tab" data-tab="notes" aria-label="Notes">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-            <path d="M4 3C3.44772 3 3 3.44772 3 4V16C3 16.5523 3.44772 17 4 17H12.5858L17 12.5858V4C17 3.44772 16.5523 3 16 3H4ZM6 7H14V9H6V7ZM6 11H14V13H6V11Z"/>
-          </svg>
-        </button>
-        <button class="tab" data-tab="settings" aria-label="Settings">
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" clip-rule="evenodd" d="M11.4892 3.17094C11.1102 1.60969 8.8898 1.60969 8.51078 3.17094C8.26594 4.17949 7.11045 4.65811 6.22416 4.11809C4.85218 3.28212 3.28212 4.85218 4.11809 6.22416C4.65811 7.11045 4.17949 8.26594 3.17094 8.51078C1.60969 8.8898 1.60969 11.1102 3.17094 11.4892C4.17949 11.7341 4.65811 12.8896 4.11809 13.7758C3.28212 15.1478 4.85218 16.7179 6.22416 15.8819C7.11045 15.3419 8.26594 15.8205 8.51078 16.8291C8.8898 18.3903 11.1102 18.3903 11.4892 16.8291C11.7341 15.8205 12.8896 15.3419 13.7758 15.8819C15.1478 16.7179 16.7179 15.1478 15.8819 13.7758C15.3419 12.8896 15.8205 11.7341 16.8291 11.4892C18.3903 11.1102 18.3903 8.8898 16.8291 8.51078C15.8205 8.26594 15.3419 7.11045 15.8819 6.22416C16.7179 4.85218 15.1478 3.28212 13.7758 4.11809C12.8896 4.65811 11.7341 4.17949 11.4892 3.17094ZM10 13C11.6569 13 13 11.6569 13 10C13 8.34315 11.6569 7 10 7C8.34315 7 7 8.34315 7 10C7 11.6569 8.34315 13 10 13Z"/>
-          </svg>
-        </button>
-      </div>
-      
-      <!-- Tab Content -->
-      <div class="tab-content">
-        <!-- Chat Tab -->
-        <div id="chat-content" class="tab-pane active">
-          <div id="chat-messages" class="messages"></div>
-          <div class="input-group">
-            <input type="text" id="chat-input" placeholder="Ask anything..." class="input-field">
-            <button id="chat-send" class="btn-primary" aria-label="Send message">
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path d="M2 2L14 8L2 14V9L10 8L2 7V2Z"/>
-              </svg>
-            </button>
-          </div>
-        </div>
-        
-        <!-- Summarize Tab -->
-        <div id="summarize-content" class="tab-pane hidden">
-          <textarea id="summarize-input" placeholder="Paste text or select from page..." class="textarea-field"></textarea>
-          <button id="summarize-btn" class="btn-primary w-full" data-enabled="true">
-            <span class="btn-text">Summarize</span>
-            <span class="btn-spinner hidden">
-              <svg class="animate-spin" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path opacity="0.3" d="M8 0C3.58172 0 0 3.58172 0 8C0 12.4183 3.58172 16 8 16C12.4183 16 16 12.4183 16 8C16 3.58172 12.4183 0 8 0Z"/>
-                <path d="M8 0V4C10.2091 4 12 5.79086 12 8H16C16 3.58172 12.4183 0 8 0Z"/>
-              </svg>
-            </span>
-          </button>
-          <div id="summarize-output" class="output-area hidden"></div>
-        </div>
-        
-        <!-- Translate Tab -->
-        <div id="translate-content" class="tab-pane hidden">
-          <select id="translate-lang" class="select-field">
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-            <option value="mr">Marathi</option>
-            <option value="kn">Kannada</option>
-          </select>
-          <textarea id="translate-input" placeholder="Enter text to translate..." class="textarea-field"></textarea>
-          <button id="translate-btn" class="btn-primary w-full" data-enabled="true">
-            <span class="btn-text">Translate</span>
-            <span class="btn-spinner hidden">
-              <svg class="animate-spin" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-                <path opacity="0.3" d="M8 0C3.58172 0 0 3.58172 0 8C0 12.4183 3.58172 16 8 16C12.4183 16 16 12.4183 16 8C16 3.58172 12.4183 0 8 0Z"/>
-                <path d="M8 0V4C10.2091 4 12 5.79086 12 8H16C16 3.58172 12.4183 0 8 0Z"/>
-              </svg>
-            </span>
-          </button>
-          <div id="translate-output" class="output-area hidden"></div>
-        </div>
-        
-        <!-- Notes Tab -->
-        <div id="notes-content" class="tab-pane hidden">
-          <textarea id="notes-input" placeholder="Quick notes..." class="textarea-field h-full"></textarea>
-          <button id="notes-save" class="btn-secondary w-full">Save Notes</button>
-        </div>
-        
-        <!-- Settings Tab -->
-        <div id="settings-content" class="tab-pane hidden">
-          <div class="settings-item">
-            <label class="settings-label">
-              <span>Enable Bubble</span>
-              <input type="checkbox" id="enable-bubble" checked>
-            </label>
-          </div>
-          <div class="settings-item">
-            <button id="reset-position" class="btn-secondary w-full">Reset Position</button>
-          </div>
-          <div class="settings-item">
-            <button id="logout-btn" class="btn-secondary w-full">Logout</button>
-          </div>
-          <div class="settings-item">
-            <button id="login-btn" class="btn-primary w-full">Login</button>
-          </div>
-        </div>
-      </div>
-      
-      <!-- Auth prompt -->
-      <div id="auth-prompt" class="auth-prompt hidden">
-        <p>Please log in to use Nexa features</p>
-        <button id="auth-login-btn" class="btn-primary">Login</button>
-      </div>
+      <!-- Panel Content -->
+      <div id="panel-content" class="panel-content"></div>
     </div>
   </div>
   

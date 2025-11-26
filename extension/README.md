@@ -1,162 +1,143 @@
-# Chrome Extension Installation & Usage Guide
+# Nexa Browser Extension
+
+A browser extension that provides a floating AI assistant bubble on all web pages with full functionality from the Nexa frontend application.
+
+## Features
+
+### Floating Bubble
+- **Accessible on all web pages** - The bubble appears on every webpage you visit
+- **Draggable** - Move the bubble anywhere on the screen
+- **All Frontend Features**:
+  - Summarize text (select text on page and auto-populate)
+  - Translate text (voice and text modes)
+  - Quick Notes (save notes directly)
+  - Voice Notes (record and transcribe)
+  - Voice Search (search with voice)
+  - Tasks (create and manage tasks)
+  - Settings (configure extension)
+
+### Side Panel Chat
+- **Dedicated Chat Interface** - Clicking "Chat" in the bubble opens a side panel
+- **Full-screen chat experience** - Better for longer conversations
+- **Chat and Summarize modes** - Switch between chat and summarization
+
+### Authentication
+- **Login/Logout in Settings** - Manage your authentication token
+- **Token Recognition** - Extension uses your login token for all API calls
+- **Settings Page** - Access via extension options or bubble settings
 
 ## Installation
 
-### 1. Load Extension in Chrome
-
-1. Open Chrome and navigate to `chrome://extensions/`
-2. Enable **Developer mode** (toggle in top-right corner)
-3. Click **Load unpacked**
-4. Select the `extension/` folder from your project: `c:/nexa-auth-groq/extension/`
-5. The Nexa extension should now appear in your extensions list
-
-### 2. Pin the Extension (Optional)
-
-- Click the puzzle icon in Chrome toolbar
-- Find "Nexa AI Assistant"
-- Click the pin icon to keep it visible
+1. Open Chrome/Edge and navigate to `chrome://extensions/` (or `edge://extensions/`)
+2. Enable "Developer mode" (toggle in top right)
+3. Click "Load unpacked"
+4. Select the `extension` folder
+5. The extension will be installed and the bubble will appear on all pages
 
 ## Usage
 
 ### First Time Setup
+1. Click the extension icon or open the bubble
+2. Go to Settings tab
+3. Click "Login" or use the Options page
+4. Enter your Nexa account credentials
+5. Start using all features!
 
-1. **Login to Nexa**:
-   - Click the Nexa bubble on any webpage
-   - Click the "Login" button in Settings tab
-   - A new tab will open to `https://nexa-nu-three.vercel.app/login`
-   - Login or register with your credentials
+### Using the Bubble
+- **Click the bubble** to open the feature menu
+- **Click any feature icon** to use that feature
+- **Click Chat** to open the side panel for chat
+- **Drag the bubble** to reposition it anywhere on the page
 
-2. **Copy Token to Extension**:
-   After logging in on the web app, you need to copy your token to the extension:
-   
-   **Option A - Manual (Current)**:
-   - Open browser console (F12) on the Nexa web app
-   - Run this command:
-     ```javascript
-     // Copy token from web app to extension
-     const token = localStorage.getItem('token');
-     chrome.storage.local.set({ nexa_token: token }, () => {
-       console.log('Token copied to extension!');
-     });
-     ```
-   
-   **Option B - Automatic (Future)**:
-   - A "Copy to Extension" button will be added to the web app
+### Using Side Panel Chat
+- Click "Chat" in the bubble to open the side panel
+- Type your message or paste text to summarize
+- Switch between "Chat" and "Summarize" modes
+- Chat history is saved automatically
 
-3. **Verify Login**:
-   - Go back to any webpage with the bubble
-   - Try using Chat or Summarize
-   - If it works, you're logged in!
+### Using Features
+- **Summarize**: Select text on any webpage, then click the bubble and go to Summarize
+- **Translate**: Enter text or use voice input to translate between languages
+- **Quick Notes**: Save quick notes that sync with your account
+- **Voice Notes**: Record voice notes that are transcribed and saved
+- **Voice Search**: Use voice to search on Google
+- **Tasks**: Create tasks with deadlines and get reminders
 
-### Features
+## Settings
 
-#### 1. **Floating Bubble**
-- Appears on every webpage (bottom-right corner)
-- Click to expand/collapse
-- Drag to reposition (position persists across pages)
+Access settings via:
+- Extension Options page (right-click extension icon → Options)
+- Bubble Settings tab
 
-#### 2. **Text Selection**
-- Select any text on a webpage
-- Right-click → "Summarize with Nexa"
-- Bubble opens with text pre-filled in Summarize tab
-
-#### 3. **Chat**
-- Ask questions and get AI responses
-- Conversation history maintained during session
-
-#### 4. **Summarize**
-- Paste or type text
-- Click "Summarize" to get concise summary
-- Works with selected text from context menu
-
-#### 5. **Translate**
-- Select target language
-- Enter text to translate
-- Supports: Spanish, French, German, Chinese, Japanese, Hindi
-
-#### 6. **Notes**
-- Quick notes that persist in extension storage
-- Click "Save Notes" to store
-
-#### 7. **Settings**
-- **Enable/Disable Bubble**: Toggle bubble visibility
-- **Reset Position**: Reset bubble to default position
-- **Logout**: Clear stored token
-
-## Troubleshooting
-
-### Extension Not Loading
-- **Error**: "Manifest file is missing or unreadable"
-  - **Fix**: Ensure you selected the `extension/` folder, not a parent folder
-
-### Bubble Not Appearing
-- Check if bubble is enabled in Settings
-- Refresh the webpage (Ctrl+R or Cmd+R)
-- Check browser console for errors (F12 → Console)
-
-### "Please log in" Error
-- **Cause**: No JWT token stored
-- **Fix**: 
-  1. Click "Login" button in bubble
-  2. Login at `https://nexa-nu-three.vercel.app/login`
-  3. Manually set token:
-     ```javascript
-     // In browser console on any page:
-     chrome.storage.local.set({ nexa_token: 'YOUR_JWT_TOKEN_HERE' });
-     ```
-
-### API Calls Failing
-- **CORS Error**:
-  - **Fix**: Backend must allow `chrome-extension://` origins
-  - Check `backend/index.js` CORS configuration
-  - Restart backend server after changes
-
-- **401 Unauthorized**:
-  - **Fix**: Token expired or invalid
-  - Logout and login again
-
-### Context Menu Not Working
-- **Fix**: Reload extension
-  - Go to `chrome://extensions/`
-  - Click reload icon on Nexa extension
-
-### Button Disappears When Disabled
-- **This bug is fixed!** Buttons now use `disabled` attribute + CSS classes
-- If you still see this, check browser console for errors
+In settings you can:
+- Login/Logout
+- Enable/Disable bubble
+- Reset bubble position
+- Manage your account
 
 ## Development
 
-### Local Backend
-To use local backend instead of production:
+### File Structure
+```
+extension/
+├── manifest.json          # Extension manifest
+├── service-worker.js      # Background service worker
+├── content.js            # Content script (injects bubble)
+├── content.css           # Bubble styles
+├── options.html          # Settings/Login page
+├── options.js            # Settings page logic
+├── bubble/               # Bubble UI
+│   ├── index.html
+│   ├── index.js
+│   └── index.css
+├── sidepanel/            # Side panel for chat
+│   ├── chat.html
+│   └── chat.js
+└── icons/                # Extension icons
+```
 
-1. Edit `extension/service-worker.js`:
-   ```javascript
-   const BACKEND_BASE = 'http://localhost:4000'; // Uncomment this line
-   // const BACKEND_BASE = 'https://nexa-yp12.onrender.com'; // Comment this line
-   ```
+### API Endpoints Used
+- `/api/auth/login` - User authentication
+- `/api/auth/me` - Get user info
+- `/api/groq/generate` - AI chat/summarize
+- `/api/notes/*` - Notes management
+- `/api/tasks/*` - Tasks management
 
-2. Reload extension in `chrome://extensions/`
+### Configuration
+Update API URLs in:
+- `service-worker.js` - `BACKEND_BASE`
+- `options.js` - `API_BASE`
+- `sidepanel/chat.js` - `API_BASE`
 
-### Debugging
-- **Service Worker Logs**: `chrome://extensions/` → Click "service worker" link under Nexa extension
-- **Content Script Logs**: F12 → Console on any webpage
-- **Bubble Iframe Logs**: F12 → Console → Select iframe context from dropdown
+## Permissions
 
-## Uninstallation
+The extension requires these permissions:
+- `storage` - Save user settings and data
+- `scripting` - Inject content scripts
+- `activeTab` - Access current tab
+- `contextMenus` - Right-click context menu
+- `tabs` - Tab management
+- `cookies` - Sync authentication
+- `sidePanel` - Side panel functionality
+- `host_permissions` - Access to backend APIs
 
-1. Go to `chrome://extensions/`
-2. Find "Nexa AI Assistant"
-3. Click "Remove"
+## Troubleshooting
 
----
+### Bubble not appearing
+- Check if bubble is enabled in Settings
+- Try refreshing the page
+- Check browser console for errors
 
-## Quick Reference
+### Not authenticated
+- Go to Settings and login
+- Check if token is valid
+- Try logging out and logging back in
 
-| Feature | Shortcut |
-|---------|----------|
-| Open Bubble | Click floating icon |
-| Summarize Selection | Right-click → "Summarize with Nexa" |
-| Close Bubble | Click X button or collapse icon |
-| Reset Position | Settings → Reset Position |
+### Side panel not opening
+- Ensure you're using Chrome/Edge with side panel support
+- Try clicking the extension icon instead
+- Check browser console for errors
 
-**Support**: For issues, check browser console (F12) for error messages.
+## License
+
+Part of the Nexa project.
