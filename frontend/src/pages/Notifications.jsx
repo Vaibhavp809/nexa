@@ -2,11 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { Bell, Clock, X, CheckCircle2 } from 'lucide-react';
 import api from '../api';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function Notifications() {
     const [tasks, setTasks] = useState([]);
     const [loading, setLoading] = useState(true);
     const [notifications, setNotifications] = useState([]);
+    const { t } = useTranslation();
 
     useEffect(() => {
         const loadData = async () => {
@@ -95,25 +97,25 @@ export default function Notifications() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-12"
+                    className="mb-12 overflow-visible"
                 >
-                    <div className="flex items-center gap-4 mb-4">
-                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                            Notifications
+                    <div className="flex items-start gap-4 mb-4 overflow-visible">
+                        <h1 className="text-4xl md:text-5xl font-bold heading-gradient leading-tight py-1 overflow-visible">
+                            {t('pages.notifications.title')}
                         </h1>
                     </div>
-                    <p className="text-gray-400 ml-0">Task reminders and updates</p>
+                    <p className="text-gray-400 ml-0">{t('pages.notifications.subtitle')}</p>
                 </motion.div>
 
                 {loading ? (
                     <div className="text-center py-12 text-gray-400">
-                        Loading notifications...
+                        {t('common.loading')} {t('pages.notifications.title').toLowerCase()}...
                     </div>
                 ) : notifications.length === 0 ? (
                     <div className="text-center py-12">
                         <Bell className="mx-auto mb-4 text-gray-500" size={48} />
-                        <h3 className="text-xl font-semibold text-gray-300 mb-2">No notifications</h3>
-                        <p className="text-gray-500">You're all caught up! No upcoming task reminders.</p>
+                        <h3 className="text-xl font-semibold text-gray-300 mb-2">{t('pages.notifications.noNotifications')}</h3>
+                        <p className="text-gray-500">{t('pages.notifications.allCaughtUp')}</p>
                     </div>
                 ) : (
                     <div className="space-y-4">
@@ -129,7 +131,7 @@ export default function Notifications() {
                                         </div>
                                         <div className="flex-1">
                                             <h3 className="text-lg font-bold text-orange-400 mb-1">
-                                                Task Reminder
+                                                {t('pages.notifications.taskReminder')}
                                             </h3>
                                             <p className="text-white font-semibold mb-1">
                                                 {notification.task.title}
@@ -143,7 +145,7 @@ export default function Notifications() {
                                                 </p>
                                             )}
                                             <p className="text-orange-300 text-xs">
-                                                Due: {new Date(notification.dueDate).toLocaleString()}
+                                                {t('pages.notifications.due')}: {new Date(notification.dueDate).toLocaleString()}
                                             </p>
                                         </div>
                                     </div>
@@ -151,14 +153,14 @@ export default function Notifications() {
                                         <button
                                             onClick={() => handleMarkComplete(notification.task)}
                                             className="p-2 bg-green-500/20 hover:bg-green-500/30 rounded-lg text-green-400 transition-colors"
-                                            title="Mark as complete"
+                                            title={t('pages.notifications.markComplete')}
                                         >
                                             <CheckCircle2 size={20} />
                                         </button>
                                         <button
                                             onClick={() => handleDismiss(notification.id)}
                                             className="p-2 bg-white/5 hover:bg-white/10 rounded-lg text-gray-400 transition-colors"
-                                            title="Dismiss"
+                                            title={t('pages.notifications.dismiss')}
                                         >
                                             <X size={20} />
                                         </button>

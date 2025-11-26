@@ -3,6 +3,7 @@ import { Plus, Search, Loader, CheckCircle2, Circle, Trash2, Edit2, Calendar } f
 import { motion, AnimatePresence } from 'framer-motion';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import api from '../api';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function Tasks() {
     const [tasks, setTasks] = useLocalStorage('nexa.tasks', []);
@@ -10,6 +11,7 @@ export default function Tasks() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [editingTask, setEditingTask] = useState(null);
+    const { t } = useTranslation();
 
     // Try to fetch from backend, fallback to localStorage
     useEffect(() => {
@@ -111,14 +113,14 @@ export default function Tasks() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-12"
+                    className="mb-12 overflow-visible"
                 >
-                    <div className="flex items-center gap-4 mb-4">
-                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                            Tasks & Reminders
+                    <div className="flex items-start gap-4 mb-4 overflow-visible">
+                        <h1 className="text-4xl md:text-5xl font-bold heading-gradient leading-tight py-1 overflow-visible">
+                            {t('pages.tasks.title')}
                         </h1>
                     </div>
-                    <p className="text-gray-400 ml-0">Stay organized and on track</p>
+                    <p className="text-gray-400 ml-0">{t('pages.tasks.subtitle')}</p>
                 </motion.div>
 
                 <div className="flex flex-col md:flex-row justify-end items-center mb-12 gap-6">
@@ -127,7 +129,7 @@ export default function Tasks() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                             <input
                                 type="text"
-                                placeholder="Search tasks..."
+                                placeholder={t('pages.tasks.searchPlaceholder')}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 transition-colors"

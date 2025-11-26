@@ -3,6 +3,7 @@ import api from '../api';
 import { User, Mail, Globe, Save, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../hooks/useTranslation';
 
 // Temporary duplicate of languages since we can't import from backend easily in frontend
 const LANGS = [
@@ -21,6 +22,7 @@ export default function Profile() {
         email: '',
         preferredLanguage: 'en'
     });
+    const { t } = useTranslation();
     
     // Password change state
     const [showChangePassword, setShowChangePassword] = useState(false);
@@ -137,14 +139,14 @@ export default function Profile() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-8"
+                    className="mb-8 overflow-visible"
                 >
-                    <div className="flex items-center gap-4 mb-4">
-                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                            Edit Profile
+                    <div className="flex items-start gap-4 mb-4 overflow-visible">
+                        <h1 className="text-4xl md:text-5xl font-bold heading-gradient leading-tight py-1 overflow-visible">
+                            {t('pages.profile.title')}
                         </h1>
                     </div>
-                    <p className="text-gray-400 ml-0">Manage your account settings</p>
+                    <p className="text-gray-400 ml-0">{t('pages.profile.subtitle')}</p>
                 </motion.div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
@@ -152,7 +154,7 @@ export default function Profile() {
                     <div>
                         <label className="block text-gray-400 mb-2 text-sm flex items-center gap-2">
                             <Mail size={18} />
-                            Email Address
+                            {t('pages.profile.email')}
                         </label>
                         <input
                             type="email"
@@ -161,14 +163,14 @@ export default function Profile() {
                             className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-blue-500 outline-none transition-colors"
                             required
                         />
-                        <p className="text-xs text-gray-500 mt-1">Your email is used as your User ID</p>
+                        <p className="text-xs text-gray-500 mt-1">{t('auth.register.emailHint')}</p>
                     </div>
 
                     {/* Username */}
                     <div>
                         <label className="block text-gray-400 mb-2 text-sm flex items-center gap-2">
                             <User size={18} />
-                            Username
+                            {t('pages.profile.username')}
                         </label>
                         <input
                             type="text"
@@ -181,7 +183,7 @@ export default function Profile() {
 
                     {/* Language */}
                     <div>
-                        <label className="block text-gray-400 mb-2 text-sm">Preferred Language</label>
+                        <label className="block text-gray-400 mb-2 text-sm">{t('pages.profile.preferredLanguage')}</label>
                         <div className="relative">
                             <Globe className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
                             <select
@@ -206,7 +208,7 @@ export default function Profile() {
                         className="w-full"
                         icon={Save}
                     >
-                        Save Changes
+                        {t('pages.profile.saveChanges')}
                     </Button>
                 </form>
                 
@@ -215,7 +217,7 @@ export default function Profile() {
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-xl font-semibold flex items-center gap-2">
                             <Lock className="text-purple-400" size={20} />
-                            Change Password
+                            {t('pages.profile.changePassword')}
                         </h2>
                         <button
                             onClick={() => {
@@ -231,7 +233,7 @@ export default function Profile() {
                             }}
                             className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
                         >
-                            {showChangePassword ? 'Cancel' : 'Change Password'}
+                            {showChangePassword ? t('common.cancel') : t('pages.profile.changePassword')}
                         </button>
                     </div>
                     
@@ -239,7 +241,7 @@ export default function Profile() {
                         <form onSubmit={handleChangePassword} className="space-y-4">
                             {securityQuestion && (
                                 <div>
-                                    <label className="block text-gray-400 mb-2 text-sm">Security Question</label>
+                                    <label className="block text-gray-400 mb-2 text-sm">{t('pages.profile.securityQuestion')}</label>
                                     <div className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-gray-300">
                                         {securityQuestion}
                                     </div>
@@ -247,19 +249,19 @@ export default function Profile() {
                             )}
                             
                             <div>
-                                <label className="block text-gray-400 mb-2 text-sm">Security Answer</label>
+                                <label className="block text-gray-400 mb-2 text-sm">{t('pages.profile.securityAnswer')}</label>
                                 <input
                                     type="text"
                                     value={securityAnswer}
                                     onChange={(e) => setSecurityAnswer(e.target.value)}
                                     className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white focus:border-blue-500 outline-none transition-colors"
-                                    placeholder="Enter your security answer"
+                                    placeholder={t('pages.profile.securityAnswer')}
                                     required
                                 />
                             </div>
                             
                             <div>
-                                <label className="block text-gray-400 mb-2 text-sm">New Password</label>
+                                <label className="block text-gray-400 mb-2 text-sm">{t('pages.profile.newPassword')}</label>
                                 <div className="relative">
                                     <input
                                         type={showNewPassword ? 'text' : 'password'}
@@ -280,7 +282,7 @@ export default function Profile() {
                             </div>
                             
                             <div>
-                                <label className="block text-gray-400 mb-2 text-sm">Confirm New Password</label>
+                                <label className="block text-gray-400 mb-2 text-sm">{t('pages.profile.confirmNewPassword')}</label>
                                 <div className="relative">
                                     <input
                                         type={showConfirmNewPassword ? 'text' : 'password'}

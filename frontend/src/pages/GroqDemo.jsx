@@ -5,6 +5,7 @@ import { ArrowLeft, Send, Trash2, FileText, MessageSquare } from 'lucide-react';
 import api from '../api';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function GroqDemo() {
   const [prompt, setPrompt] = useState('');
@@ -12,6 +13,7 @@ export default function GroqDemo() {
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState('chat'); // 'chat' or 'summarize'
   const [history, setHistory] = useLocalStorage('nexa.groqHistory', []);
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -53,17 +55,17 @@ export default function GroqDemo() {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-12"
+          className="mb-12 overflow-visible"
         >
-          <div className="flex items-center gap-4 mb-4">
-            <Link to="/" className="text-gray-400 hover:text-white transition-colors">
+          <div className="flex items-start gap-4 mb-4 overflow-visible">
+            <Link to="/" className="text-gray-400 hover:text-white transition-colors mt-1">
               <ArrowLeft size={24} />
             </Link>
-            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-              AI Chat & Summarizer
+            <h1 className="text-4xl md:text-5xl font-bold heading-gradient leading-tight py-1 overflow-visible">
+              {t('pages.chat.title')}
             </h1>
           </div>
-          <p className="text-gray-400 ml-10">Powered by Groq for lightning-fast AI responses</p>
+          <p className="text-gray-400 ml-10">{t('pages.chat.subtitle')}</p>
         </motion.div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -85,7 +87,7 @@ export default function GroqDemo() {
                 }`}
               >
                 <MessageSquare size={20} />
-                Chat
+                {t('nav.chat')}
               </button>
               <button
                 onClick={() => setMode('summarize')}
@@ -96,7 +98,7 @@ export default function GroqDemo() {
                 }`}
               >
                 <FileText size={20} />
-                Summarize
+                {t('pages.chat.summarize')}
               </button>
             </motion.div>
 
@@ -109,7 +111,7 @@ export default function GroqDemo() {
             >
               <form onSubmit={handleSubmit} className="space-y-4">
                 <label className="block text-sm font-medium text-gray-300">
-                  {mode === 'summarize' ? 'Paste text to summarize' : 'Enter your message'}
+                  {mode === 'summarize' ? t('pages.chat.pasteText') : t('pages.chat.enterMessage')}
                 </label>
                 <textarea
                   value={prompt}
@@ -117,12 +119,12 @@ export default function GroqDemo() {
                   className="w-full bg-white/5 border border-white/10 rounded-lg p-4 text-white placeholder-gray-500 focus:outline-none focus:border-blue-500 transition-colors resize-none"
                   style={{ minHeight: '200px' }}
                   placeholder={mode === 'summarize' 
-                    ? 'Paste or type the text you want to summarize here...' 
-                    : 'Ask anything or have a conversation...'}
+                    ? t('pages.chat.pasteText') + '...' 
+                    : t('pages.chat.enterMessage') + '...'}
                 />
                 <div className="flex justify-end">
                   <Button type="submit" isLoading={loading} icon={Send}>
-                    {mode === 'summarize' ? 'Summarize' : 'Send'}
+                    {mode === 'summarize' ? t('pages.chat.summarize') : t('common.send')}
                   </Button>
                 </div>
               </form>
@@ -135,8 +137,8 @@ export default function GroqDemo() {
                 animate={{ opacity: 1, y: 0 }}
                 className="p-6 rounded-2xl bg-white/5 border border-white/10"
               >
-                <h3 className="text-lg font-bold mb-4 bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">
-                  {mode === 'summarize' ? 'Summary' : 'Response'}
+                <h3 className="text-lg font-bold mb-4 heading-gradient leading-tight py-1">
+                  {mode === 'summarize' ? t('pages.chat.summary') : t('pages.chat.response')}
                 </h3>
                 <div className="bg-black/30 p-4 rounded-lg">
                   <p className="text-gray-300 whitespace-pre-wrap leading-relaxed">
@@ -155,13 +157,13 @@ export default function GroqDemo() {
             className="space-y-4"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-gray-300">History</h3>
+              <h3 className="text-lg font-bold text-gray-300">{t('pages.chat.history')}</h3>
               {history.length > 0 && (
                 <button 
                   onClick={clearHistory} 
                   className="text-xs text-red-400 hover:text-red-300 flex items-center gap-1 transition-colors"
                 >
-                  <Trash2 className="w-4 h-4" /> Clear
+                  <Trash2 className="w-4 h-4" /> {t('common.clear')}
                 </button>
               )}
             </div>
@@ -184,7 +186,7 @@ export default function GroqDemo() {
                       <MessageSquare size={14} className="text-blue-400" />
                     )}
                     <span className="text-xs font-semibold text-gray-400 uppercase">
-                      {item.mode === 'summarize' ? 'Summary' : 'Chat'}
+                      {item.mode === 'summarize' ? t('pages.chat.summary') : t('nav.chat')}
                     </span>
                   </div>
                   <p className="font-medium text-white truncate mb-1 text-sm">{item.prompt.substring(0, 50)}{item.prompt.length > 50 ? '...' : ''}</p>
@@ -195,7 +197,7 @@ export default function GroqDemo() {
                 </div>
               ))}
               {history.length === 0 && (
-                <p className="text-gray-500 text-sm italic text-center py-8">No history yet.</p>
+                <p className="text-gray-500 text-sm italic text-center py-8">{t('pages.chat.noHistory')}</p>
               )}
             </div>
           </motion.div>

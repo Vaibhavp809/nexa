@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth.jsx';
 import { Button } from '../ui/Button';
 import { UserPlus, Eye, EyeOff } from 'lucide-react';
 import { SECURITY_QUESTIONS } from '../utils/securityQuestions';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function Register() {
   const [username, setUsername] = useState('');
@@ -19,6 +20,7 @@ export default function Register() {
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -63,11 +65,11 @@ export default function Register() {
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md p-8 rounded-2xl bg-white/5 border border-white/10 shadow-lg">
-        <h2 className="text-4xl font-bold text-center mb-2 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-          Create Account
+      <div className="w-full max-w-md p-8 rounded-2xl bg-white/5 border border-white/10 shadow-lg overflow-visible">
+        <h2 className="text-4xl font-bold text-center mb-2 heading-gradient leading-tight py-1 overflow-visible">
+          {t('auth.register.title')}
         </h2>
-        <p className="text-center text-gray-400 mb-8">Join the future of AI</p>
+        <p className="text-center text-gray-400 mb-8">{t('auth.register.subtitle')}</p>
 
         {error && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded text-red-500 text-sm text-center">
@@ -77,7 +79,7 @@ export default function Register() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Username</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">{t('auth.register.username')}</label>
             <input
               type="text"
               value={username}
@@ -89,7 +91,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Email (User ID)</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">{t('auth.register.email')}</label>
             <input
               type="email"
               value={email}
@@ -98,11 +100,11 @@ export default function Register() {
               placeholder="you@example.com"
               required
             />
-            <p className="text-xs text-gray-500 mt-1">Your email will be used as your User ID</p>
+            <p className="text-xs text-gray-500 mt-1">{t('auth.register.emailHint')}</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">{t('auth.register.password')}</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -123,7 +125,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Confirm Password</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">{t('auth.register.confirmPassword')}</label>
             <div className="relative">
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
@@ -147,7 +149,7 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Security Question</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">{t('auth.register.securityQuestion')}</label>
             <select
               value={securityQuestion}
               onChange={(e) => setSecurityQuestion(e.target.value)}
@@ -155,7 +157,7 @@ export default function Register() {
               style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
               required
             >
-              <option value="" style={{ backgroundColor: '#111827', color: '#ffffff' }}>Select a security question</option>
+              <option value="" style={{ backgroundColor: '#111827', color: '#ffffff' }}>{t('auth.register.securityQuestion')}...</option>
               {SECURITY_QUESTIONS.map((question, index) => (
                 <option key={index} value={question} style={{ backgroundColor: '#111827', color: '#ffffff' }}>{question}</option>
               ))}
@@ -164,16 +166,15 @@ export default function Register() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Security Answer</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">{t('auth.register.securityAnswer')}</label>
             <input
               type="text"
               value={securityAnswer}
               onChange={(e) => setSecurityAnswer(e.target.value)}
               className="input-field"
-              placeholder="Enter your answer"
+              placeholder={t('auth.register.securityAnswer')}
               required
             />
-            <p className="text-xs text-gray-500 mt-1">Remember this answer - you'll need it to change your password</p>
           </div>
 
           <div className="flex items-start gap-2">
@@ -186,23 +187,20 @@ export default function Register() {
               required
             />
             <label htmlFor="terms" className="text-sm text-gray-300 cursor-pointer">
-              I agree to the{' '}
-              <Link to="/terms" className="text-blue-400 hover:text-purple-400 hover:underline transition-colors" target="_blank">
-                Terms and Conditions
-              </Link>
+              {t('auth.register.terms')}
             </label>
           </div>
 
           <Button type="submit" className="w-full" variant="primary" isLoading={loading} icon={UserPlus}>
-            Sign Up
+            {t('auth.register.signUp')}
           </Button>
         </form>
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-400">
-            Already have an account?{' '}
+            {t('auth.register.haveAccount')}{' '}
             <Link to="/login" className="text-blue-400 hover:text-purple-400 transition-colors font-semibold">
-              Sign in
+              {t('auth.register.signIn')}
             </Link>
           </p>
         </div>

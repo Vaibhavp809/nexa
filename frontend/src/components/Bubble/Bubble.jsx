@@ -5,6 +5,7 @@ import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { BubblePanel } from './BubblePanel';
 import { clsx } from 'clsx';
 import api from '../../api';
+import { useTranslation } from '../../hooks/useTranslation';
 
 const BUBBLE_ICONS = {
     bot: Bot,
@@ -13,23 +14,29 @@ const BUBBLE_ICONS = {
     circle: CircleDot,
 };
 
-const FEATURES = [
-    { id: 'summarize', icon: FileText, label: 'Summarize', color: 'text-purple-400' },
-    { id: 'translate', icon: Languages, label: 'Translate', color: 'text-pink-400' },
-    { id: 'quicknotes', icon: StickyNote, label: 'Quick Notes', color: 'text-green-400' },
-    { id: 'voicenotes', icon: Mic, label: 'Voice Notes', color: 'text-blue-400' },
-    { id: 'voicesearch', icon: Search, label: 'Voice Search', color: 'text-cyan-400' },
-    { id: 'tasks', icon: Calendar, label: 'Tasks', color: 'text-orange-400' },
-    { id: 'settings', icon: Settings, label: 'Settings', color: 'text-yellow-400' },
-];
+// FEATURES will be created inside component to use translations
 
 export default function Bubble() {
-    const [position, setPosition] = useLocalStorage('nexa.bubble.position', { x: window.innerWidth - 80, y: window.innerHeight - 80 });
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768;
+    const initialX = isMobile ? Math.min(window.innerWidth - 80, window.innerWidth - 20) : window.innerWidth - 80;
+    const initialY = isMobile ? Math.min(window.innerHeight - 80, window.innerHeight - 100) : window.innerHeight - 80;
+    const [position, setPosition] = useLocalStorage('nexa.bubble.position', { x: initialX, y: initialY });
     const [isEnabled, setIsEnabled] = useLocalStorage('nexa.bubble.enabled', true);
     const [bubbleIconType, setBubbleIconType] = useLocalStorage('nexa.bubble.icon', 'bot');
     const [showMenu, setShowMenu] = useState(false);
     const [activeFeature, setActiveFeature] = useState(null);
     const [taskReminder, setTaskReminder] = useState(null);
+    const { t } = useTranslation();
+    
+    const FEATURES = [
+        { id: 'summarize', icon: FileText, label: t('bubble.features.summarize'), color: 'text-purple-400' },
+        { id: 'translate', icon: Languages, label: t('bubble.features.translate'), color: 'text-pink-400' },
+        { id: 'quicknotes', icon: StickyNote, label: t('bubble.features.quicknotes'), color: 'text-green-400' },
+        { id: 'voicenotes', icon: Mic, label: t('bubble.features.voicenotes'), color: 'text-blue-400' },
+        { id: 'voicesearch', icon: Search, label: t('bubble.features.voicesearch'), color: 'text-cyan-400' },
+        { id: 'tasks', icon: Calendar, label: t('bubble.features.tasks'), color: 'text-orange-400' },
+        { id: 'settings', icon: Settings, label: t('bubble.features.settings'), color: 'text-yellow-400' },
+    ];
     
     const BubbleIcon = BUBBLE_ICONS[bubbleIconType] || Bot;
     const constraintsRef = useRef(null);
@@ -122,7 +129,7 @@ export default function Bubble() {
         return () => document.removeEventListener('mouseup', handleSelection);
     }, [isEnabled, activeFeature]);
 
-    // Close menu when clicking outside
+    // Close menu when clicking outside (both mouse and touch events)
     useEffect(() => {
         const handleClickOutside = (e) => {
             if (showMenu && menuRef.current && !menuRef.current.contains(e.target) && bubbleRef.current && !bubbleRef.current.contains(e.target)) {
@@ -132,7 +139,11 @@ export default function Bubble() {
 
         if (showMenu) {
             document.addEventListener('mousedown', handleClickOutside);
-            return () => document.removeEventListener('mousedown', handleClickOutside);
+            document.addEventListener('touchstart', handleClickOutside);
+            return () => {
+                document.removeEventListener('mousedown', handleClickOutside);
+                document.removeEventListener('touchstart', handleClickOutside);
+            };
         }
     }, [showMenu]);
 
@@ -177,8 +188,8 @@ export default function Bubble() {
         );
     }
 
-    const bubbleSize = 64;
-    const iconSize = 48;
+    const bubbleSize = isMobile ? 56 : 64;
+    const iconSize = isMobile ? 40 : 48;
     const bubbleCenterX = position.x + bubbleSize / 2;
     const bubbleCenterY = position.y + bubbleSize / 2;
     
@@ -333,22 +344,36 @@ export default function Bubble() {
                 }}
                 onDragEnd={(e, info) => {
                     // Keep within viewport bounds
-                    const panelWidth = activeFeature ? 380 : bubbleSize;
-                    const panelHeight = activeFeature ? 500 : bubbleSize;
+                    const panelWidth = activeFeature ? (isMobile ? window.innerWidth - 20 : 380) : bubbleSize;
+                    const panelHeight = activeFeature ? (isMobile ? window.innerHeight - 20 : 500) : bubbleSize;
                     let x = Math.max(0, Math.min(info.point.x, window.innerWidth - panelWidth));
                     let y = Math.max(0, Math.min(info.point.y, window.innerHeight - panelHeight));
                     setPosition({ x, y });
                 }}
                 animate={{
-                    width: activeFeature ? 380 : bubbleSize,
-                    height: activeFeature ? 500 : bubbleSize,
-                    borderRadius: activeFeature ? 16 : 32,
+                    width: activeFeature ? (isMobile ? 'calc(100vw - 20px)' : 380) : bubbleSize,
+                    height: activeFeature ? (isMobile ? 'calc(100vh - 20px)' : 500) : bubbleSize,
+                    borderRadius: activeFeature ? 16 : (isMobile ? 28 : 32),
                 }}
                 className={clsx(
                     "fixed pointer-events-auto z-50 glass-card shadow-neon flex flex-col overflow-visible transition-colors duration-300",
-                    activeFeature ? "bg-slate-900/95" : "bg-black/40 hover:bg-neon-blue/20 cursor-pointer"
+                    activeFeature ? "bg-slate-900/95" : "bg-black/40 hover:bg-neon-blue/20 active:bg-neon-blue/30 cursor-pointer",
+                    isMobile && "bubble-mobile"
                 )}
-                style={{ x: position.x, y: position.y }}
+                style={{ 
+                    x: position.x, 
+                    y: position.y,
+                    ...(isMobile && !activeFeature && { 
+                        touchAction: 'pan-x pan-y',
+                        WebkitTouchCallout: 'none',
+                        WebkitUserSelect: 'none',
+                        userSelect: 'none'
+                    }),
+                    ...(isMobile && activeFeature && { 
+                        maxWidth: 'calc(100vw - 20px)',
+                        maxHeight: 'calc(100vh - 20px)',
+                    })
+                }}
             >
                 {/* Task Reminder Notification - Attached to Bubble */}
                 <AnimatePresence>
@@ -388,11 +413,21 @@ export default function Bubble() {
                 {/* Bubble Icon */}
                 {!activeFeature && (
                     <div
-                        className="w-full h-full flex items-center justify-center cursor-move"
+                        className="w-full h-full flex items-center justify-center cursor-move touch-manipulation"
                         onClick={toggleMenu}
+                        onTouchEnd={(e) => {
+                            // Prevent triggering menu on drag end
+                            if (e.type === 'touchend' && e.changedTouches.length > 0) {
+                                const touch = e.changedTouches[0];
+                                const element = document.elementFromPoint(touch.clientX, touch.clientY);
+                                if (element && bubbleRef.current && bubbleRef.current.contains(element)) {
+                                    toggleMenu();
+                                }
+                            }
+                        }}
                     >
                         <div className="relative flex items-center justify-center">
-                            <BubbleIcon className="w-8 h-8 text-neon-blue" />
+                            <BubbleIcon className={clsx("text-neon-blue", isMobile ? "w-7 h-7" : "w-8 h-8")} />
                             <span className="absolute inset-0 rounded-full animate-pulse-slow ring-1 ring-neon-blue/50" />
                         </div>
                     </div>
@@ -408,22 +443,23 @@ export default function Bubble() {
                             className="flex flex-col h-full"
                         >
                             {/* Panel Header */}
-                            <div className="flex items-center justify-between p-3 border-b border-white/10">
-                                <div className="flex items-center gap-2">
+                            <div className="flex items-center justify-between p-2 sm:p-3 border-b border-white/10">
+                                <div className="flex items-center gap-2 min-w-0 flex-1">
                                     {(() => {
                                         const Feature = FEATURES.find(f => f.id === activeFeature);
                                         const Icon = Feature?.icon || Bot;
-                                        return <Icon className={clsx("w-5 h-5", Feature?.color || "text-neon-blue")} />;
+                                        return <Icon className={clsx("w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0", Feature?.color || "text-neon-blue")} />;
                                     })()}
-                                    <span className="font-bold text-white">
+                                    <span className="font-bold text-white text-sm sm:text-base truncate">
                                         {FEATURES.find(f => f.id === activeFeature)?.label || 'Nexa'}
                                     </span>
                                 </div>
                                 <button 
                                     onClick={closePanel} 
-                                    className="p-1 hover:bg-white/10 rounded text-gray-400 hover:text-white transition-colors"
+                                    className="p-2 hover:bg-white/10 active:bg-white/20 rounded text-gray-400 hover:text-white transition-colors flex-shrink-0 touch-manipulation"
+                                    aria-label="Close panel"
                                 >
-                                    <X className="w-4 h-4" />
+                                    <X className="w-5 h-5 sm:w-4 sm:h-4" />
                                 </button>
                             </div>
 

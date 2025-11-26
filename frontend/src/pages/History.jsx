@@ -108,10 +108,10 @@ export default function History() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-12"
+                    className="mb-12 overflow-visible"
                 >
-                    <div className="flex items-center gap-4 mb-4">
-                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                    <div className="flex items-start gap-4 mb-4 overflow-visible">
+                        <h1 className="text-4xl md:text-5xl font-bold heading-gradient leading-tight py-1 overflow-visible">
                             History
                         </h1>
                     </div>

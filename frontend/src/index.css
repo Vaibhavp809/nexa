@@ -51,6 +51,82 @@
   .neon-icon {
     @apply drop-shadow-[0_0_2px_rgba(0,179,255,0.8)];
   }
+
+  /* Heading styles for Indian languages - accommodate diacritics (matras, vyanjanas, vatakshras) */
+  .heading-gradient {
+    @apply bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent;
+    line-height: 1.5 !important;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    overflow: visible !important;
+    text-overflow: unset;
+    white-space: normal;
+    -webkit-background-clip: text;
+    background-clip: text;
+    display: inline-block;
+    max-width: 100%;
+  }
+
+  /* Ensure gradient text containers have proper spacing and don't clip */
+  h1.heading-gradient,
+  h2.heading-gradient,
+  h3.heading-gradient {
+    display: inline-block;
+    min-height: fit-content;
+    overflow: visible !important;
+    position: relative;
+  }
+
+  /* Parent containers should also allow overflow */
+  .heading-container {
+    overflow: visible !important;
+    position: relative;
+  }
+}
+
+/* Mobile-specific styles */
+@media (max-width: 768px) {
+  /* Better touch targets for mobile */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve scroll on mobile */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent text size adjustment on iOS */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Better spacing for mobile */
+  .glass-card {
+    padding: 1rem;
+  }
+
+  /* Bubble mobile optimizations */
+  .bubble-mobile {
+    touch-action: none;
+    -webkit-touch-callout: none;
+    user-select: none;
+  }
+}
+
+/* Touch-friendly interactions */
+@media (hover: none) and (pointer: coarse) {
+  /* Remove hover effects on touch devices */
+  .hover\:bg-white\/10:hover {
+    background-color: transparent;
+  }
+
+  /* Better active states for touch */
+  button:active, a:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+  }
 }
 
 /* Custom scrollbar for webkit */

@@ -4,6 +4,7 @@ import { Button } from '../ui/Button';
 import api from '../api';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../hooks/useTranslation';
 
 const LANGUAGES = [
     { code: 'en', name: 'English', nativeName: 'English' },
@@ -131,6 +132,7 @@ export default function Meditator() {
     const [activeInterface, setActiveInterface] = useState('voice'); // 'voice' or 'text'
     const [micPermission, setMicPermission] = useState(null); // null, 'granted', 'denied'
     const [isListening, setIsListening] = useState(false);
+    const { t } = useTranslation();
 
     // Check microphone permission on mount
     useEffect(() => {
@@ -165,14 +167,14 @@ export default function Meditator() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-12"
+                    className="mb-12 overflow-visible"
                 >
-                    <div className="flex items-center gap-4 mb-4">
-                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                            Meditator
+                    <div className="flex items-start gap-4 mb-4 overflow-visible">
+                        <h1 className="text-4xl md:text-5xl font-bold heading-gradient leading-tight py-1">
+                            {t('pages.meditator.title')}
                         </h1>
                     </div>
-                    <p className="text-gray-400 ml-0">Your AI-powered translation and conversation mediator</p>
+                    <p className="text-gray-400 ml-0">{t('pages.meditator.subtitle')}</p>
                 </motion.div>
 
                 {/* Interface Selection */}
@@ -186,7 +188,7 @@ export default function Meditator() {
                         }`}
                     >
                         <Mic size={20} />
-                        Voice Interface
+                        {t('meditator.voiceInterface')}
                     </button>
                     <button
                         onClick={() => setActiveInterface('text')}
@@ -197,7 +199,7 @@ export default function Meditator() {
                         }`}
                     >
                         <FileText size={20} />
-                        Text Interface
+                        {t('meditator.textInterface')}
                     </button>
                 </div>
 
@@ -207,12 +209,12 @@ export default function Meditator() {
                         <div className="flex items-center gap-3">
                             <MicOff className="text-yellow-400" size={24} />
                             <div>
-                                <p className="font-semibold text-yellow-400">Microphone Permission Required</p>
-                                <p className="text-sm text-gray-400">Please allow microphone access to use voice features</p>
+                                <p className="font-semibold text-yellow-400">{t('meditator.micPermission.required')}</p>
+                                <p className="text-sm text-gray-400">{t('meditator.micPermission.description')}</p>
                             </div>
                         </div>
                         <Button onClick={requestMicrophonePermission} variant="primary">
-                            Grant Permission
+                            {t('meditator.micPermission.grant')}
                         </Button>
                     </div>
                 )}
@@ -223,7 +225,7 @@ export default function Meditator() {
                 {activeInterface === 'voice' && micPermission === 'denied' && (
                     <div className="text-center py-12 text-gray-400">
                         <MicOff className="mx-auto mb-4 text-red-400" size={48} />
-                        <p className="text-lg">Microphone access denied. Please enable it in your browser settings.</p>
+                        <p className="text-lg">{t('meditator.micPermission.denied')}</p>
                     </div>
                 )}
             </div>
@@ -236,6 +238,7 @@ function VoiceInterface() {
     const [mode, setMode] = useState('basic'); // 'basic' or 'conversation'
     const [voiceHistory, setVoiceHistory] = useLocalStorage('nexa.meditator.voice.history', []);
     const [showHistory, setShowHistory] = useState(false);
+    const { t } = useTranslation();
 
     return (
         <div className="space-y-6">
@@ -250,7 +253,7 @@ function VoiceInterface() {
                     }`}
                 >
                     <Languages size={20} />
-                    Basic Translation
+                    {t('meditator.voice.basicTranslation')}
                 </button>
                 <button
                     onClick={() => setMode('conversation')}
@@ -261,13 +264,13 @@ function VoiceInterface() {
                     }`}
                 >
                     <MessageSquare size={20} />
-                    Conversation Mode
+                    {t('meditator.voice.conversationMode')}
                 </button>
                 <button
                     onClick={() => setShowHistory(!showHistory)}
                     className="px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 bg-white/5 text-gray-400 border-2 border-white/10 hover:bg-white/10"
                 >
-                    History ({voiceHistory.length})
+                    {t('meditator.voice.history')} ({voiceHistory.length})
                 </button>
             </div>
 
@@ -297,6 +300,7 @@ function BasicVoiceTranslation({ history, setHistory }) {
     const [isTranslating, setIsTranslating] = useState(false);
     const recognitionRef = useRef(null);
     const synthRef = useRef(null);
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -475,11 +479,11 @@ Translated text (${targetLangName}):`;
 
     return (
         <div className="glass-card p-6">
-            <h2 className="text-2xl font-bold mb-6">Basic Voice Translation</h2>
+            <h2 className="text-2xl font-bold mb-6">{t('meditator.voice.basicTranslation')}</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
-                    <label className="block text-sm text-gray-400 mb-2">Source Language</label>
+                    <label className="block text-sm text-gray-400 mb-2">{t('meditator.voice.sourceLanguage')}</label>
                     <select
                         value={sourceLang}
                         onChange={(e) => setSourceLang(e.target.value)}
@@ -488,13 +492,13 @@ Translated text (${targetLangName}):`;
                     >
                         {LANGUAGES.map(lang => (
                             <option key={lang.code} value={lang.code} style={{ backgroundColor: '#111827', color: '#ffffff' }}>
-                                {lang.name} ({lang.nativeName})
+                                {t(`languages.${lang.code}`)} ({lang.nativeName})
                             </option>
                         ))}
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm text-gray-400 mb-2">Target Language</label>
+                    <label className="block text-sm text-gray-400 mb-2">{t('meditator.voice.targetLanguage')}</label>
                     <select
                         value={targetLang}
                         onChange={(e) => setTargetLang(e.target.value)}
@@ -503,7 +507,7 @@ Translated text (${targetLangName}):`;
                     >
                         {LANGUAGES.filter(l => l.code !== sourceLang).map(lang => (
                             <option key={lang.code} value={lang.code} style={{ backgroundColor: '#111827', color: '#ffffff' }}>
-                                {lang.name} ({lang.nativeName})
+                                {t(`languages.${lang.code}`)} ({lang.nativeName})
                             </option>
                         ))}
                     </select>
@@ -527,12 +531,12 @@ Translated text (${targetLangName}):`;
                     )}
                 </button>
                 <p className="text-sm text-gray-400">
-                    {isListening ? 'Listening... Click to stop' : isTranslating ? 'Translating...' : 'Click to start speaking'}
+                    {isListening ? t('meditator.voice.listening') + ' - ' + t('common.close') : isTranslating ? t('meditator.voice.translating') : t('meditator.voice.startListening')}
                 </p>
 
                 {transcript && (
                     <div className="p-4 bg-white/5 rounded-lg border border-white/10 text-left">
-                        <p className="text-xs text-gray-400 mb-2">You said:</p>
+                        <p className="text-xs text-gray-400 mb-2">{t('meditator.voice.original')}:</p>
                         <p className="text-white">{transcript}</p>
                     </div>
                 )}
@@ -540,7 +544,7 @@ Translated text (${targetLangName}):`;
                 {translation && (
                     <div className="p-4 bg-blue-500/10 rounded-lg border border-blue-500/30 text-left">
                         <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs text-blue-400 font-bold">Translation:</p>
+                            <p className="text-xs text-blue-400 font-bold">{t('meditator.voice.translated')}:</p>
                             <button
                                 onClick={() => {
                                     const utterance = new SpeechSynthesisUtterance(translation);
@@ -581,6 +585,7 @@ function ConversationMode({ history, setHistory }) {
     const [person2Translation, setPerson2Translation] = useState('');
     const [isListening, setIsListening] = useState(false);
     const recognitionRef = useRef(null);
+    const { t } = useTranslation();
 
     useEffect(() => {
         if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -811,12 +816,12 @@ Translation:`;
 
     return (
         <div className="glass-card p-6">
-            <h2 className="text-2xl font-bold mb-6">Conversation Mode</h2>
+            <h2 className="text-2xl font-bold mb-6">{t('meditator.voice.conversationMode')}</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                 {/* Person 1 */}
                 <div>
-                    <label className="block text-sm text-gray-400 mb-2">Person 1 Language</label>
+                    <label className="block text-sm text-gray-400 mb-2">{t('meditator.voice.person1')} {t('meditator.voice.sourceLanguage')}</label>
                     <select
                         value={person1Lang}
                         onChange={(e) => setPerson1Lang(e.target.value)}
@@ -825,7 +830,7 @@ Translation:`;
                     >
                         {LANGUAGES.map(lang => (
                             <option key={lang.code} value={lang.code} style={{ backgroundColor: '#111827', color: '#ffffff' }}>
-                                {lang.name} ({lang.nativeName})
+                                {t(`languages.${lang.code}`)} ({lang.nativeName})
                             </option>
                         ))}
                     </select>
@@ -839,17 +844,17 @@ Translation:`;
                         }`}
                     >
                         <Mic size={20} />
-                        Person 1 Speak
+                        {t('meditator.voice.person1')} {t('meditator.voice.startListening')}
                     </button>
                     {person1Transcript && (
                         <div className="mt-4 space-y-2">
                             <div className="p-3 bg-white/5 rounded-lg text-sm">
-                                <p className="text-gray-400 text-xs mb-1">Said:</p>
+                                <p className="text-gray-400 text-xs mb-1">{t('meditator.voice.original')}:</p>
                                 <p className="text-white">{person1Transcript}</p>
                             </div>
                             {person1Translation && (
                                 <div className="p-3 bg-blue-500/10 rounded-lg text-sm border border-blue-500/30">
-                                    <p className="text-blue-400 text-xs mb-1">Translation ({LANGUAGES.find(l => l.code === person2Lang)?.name}):</p>
+                                    <p className="text-blue-400 text-xs mb-1">{t('meditator.voice.translated')} ({LANGUAGES.find(l => l.code === person2Lang)?.name}):</p>
                                     <p className="text-white">{person1Translation}</p>
                                 </div>
                             )}
@@ -859,7 +864,7 @@ Translation:`;
 
                 {/* Person 2 */}
                 <div>
-                    <label className="block text-sm text-gray-400 mb-2">Person 2 Language</label>
+                    <label className="block text-sm text-gray-400 mb-2">{t('meditator.voice.person2')} {t('meditator.voice.sourceLanguage')}</label>
                     <select
                         value={person2Lang}
                         onChange={(e) => setPerson2Lang(e.target.value)}
@@ -868,7 +873,7 @@ Translation:`;
                     >
                         {LANGUAGES.map(lang => (
                             <option key={lang.code} value={lang.code} style={{ backgroundColor: '#111827', color: '#ffffff' }}>
-                                {lang.name} ({lang.nativeName})
+                                {t(`languages.${lang.code}`)} ({lang.nativeName})
                             </option>
                         ))}
                     </select>
@@ -882,17 +887,17 @@ Translation:`;
                         }`}
                     >
                         <Mic size={20} />
-                        Person 2 Speak
+                        {t('meditator.voice.person2')} {t('meditator.voice.startListening')}
                     </button>
                     {person2Transcript && (
                         <div className="mt-4 space-y-2">
                             <div className="p-3 bg-white/5 rounded-lg text-sm">
-                                <p className="text-gray-400 text-xs mb-1">Said:</p>
+                                <p className="text-gray-400 text-xs mb-1">{t('meditator.voice.original')}:</p>
                                 <p className="text-white">{person2Transcript}</p>
                             </div>
                             {person2Translation && (
                                 <div className="p-3 bg-purple-500/10 rounded-lg text-sm border border-purple-500/30">
-                                    <p className="text-purple-400 text-xs mb-1">Translation ({LANGUAGES.find(l => l.code === person1Lang)?.name}):</p>
+                                    <p className="text-purple-400 text-xs mb-1">{t('meditator.voice.translated')} ({LANGUAGES.find(l => l.code === person1Lang)?.name}):</p>
                                     <p className="text-white">{person2Translation}</p>
                                 </div>
                             )}
@@ -902,7 +907,7 @@ Translation:`;
             </div>
 
             <div className="text-center text-sm text-gray-400">
-                <p>Select who is speaking, then click their button and speak. The translation will be spoken automatically.</p>
+                <p>{t('meditator.voice.startListening')} - {t('meditator.voice.translated')}</p>
             </div>
         </div>
     );
@@ -913,6 +918,7 @@ function TextInterface({ micPermission, requestPermission }) {
     const [mode, setMode] = useState('translate'); // 'translate' or 'dictate'
     const [textHistory, setTextHistory] = useLocalStorage('nexa.meditator.text.history', []);
     const [showHistory, setShowHistory] = useState(false);
+    const { t } = useTranslation();
 
     return (
         <div className="space-y-6">
@@ -927,7 +933,7 @@ function TextInterface({ micPermission, requestPermission }) {
                     }`}
                 >
                     <Languages size={20} />
-                    Translate
+                    {t('meditator.text.normalTranslate')}
                 </button>
                 <button
                     onClick={() => setMode('dictate')}
@@ -938,13 +944,13 @@ function TextInterface({ micPermission, requestPermission }) {
                     }`}
                 >
                     <Volume2 size={20} />
-                    Dictate
+                    {t('meditator.text.dictate')}
                 </button>
                 <button
                     onClick={() => setShowHistory(!showHistory)}
                     className="px-6 py-3 rounded-lg font-semibold transition-all flex items-center gap-2 bg-white/5 text-gray-400 border-2 border-white/10 hover:bg-white/10"
                 >
-                    History ({textHistory.length})
+                    {t('meditator.history.title')} ({textHistory.length})
                 </button>
             </div>
 
@@ -976,6 +982,7 @@ function TextTranslation({ history, setHistory }) {
     const [inputText, setInputText] = useState('');
     const [translatedText, setTranslatedText] = useState('');
     const [isTranslating, setIsTranslating] = useState(false);
+    const { t } = useTranslation();
 
     const handleTranslate = async () => {
         if (!inputText.trim()) return;
@@ -1010,11 +1017,11 @@ function TextTranslation({ history, setHistory }) {
 
     return (
         <div className="glass-card p-6">
-            <h2 className="text-2xl font-bold mb-6">Text Translation</h2>
+            <h2 className="text-2xl font-bold mb-6">{t('meditator.text.normalTranslate')}</h2>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                 <div>
-                    <label className="block text-sm text-gray-400 mb-2">Source Language</label>
+                    <label className="block text-sm text-gray-400 mb-2">{t('meditator.text.sourceLanguage')}</label>
                     <select
                         value={sourceLang}
                         onChange={(e) => setSourceLang(e.target.value)}
@@ -1023,13 +1030,13 @@ function TextTranslation({ history, setHistory }) {
                     >
                         {LANGUAGES.map(lang => (
                             <option key={lang.code} value={lang.code} style={{ backgroundColor: '#111827', color: '#ffffff' }}>
-                                {lang.name} ({lang.nativeName})
+                                {t(`languages.${lang.code}`)} ({lang.nativeName})
                             </option>
                         ))}
                     </select>
                 </div>
                 <div>
-                    <label className="block text-sm text-gray-400 mb-2">Target Language</label>
+                    <label className="block text-sm text-gray-400 mb-2">{t('meditator.text.targetLanguage')}</label>
                     <select
                         value={targetLang}
                         onChange={(e) => setTargetLang(e.target.value)}
@@ -1038,7 +1045,7 @@ function TextTranslation({ history, setHistory }) {
                     >
                         {LANGUAGES.filter(l => l.code !== sourceLang).map(lang => (
                             <option key={lang.code} value={lang.code} style={{ backgroundColor: '#111827', color: '#ffffff' }}>
-                                {lang.name} ({lang.nativeName})
+                                {t(`languages.${lang.code}`)} ({lang.nativeName})
                             </option>
                         ))}
                     </select>
@@ -1047,28 +1054,28 @@ function TextTranslation({ history, setHistory }) {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                    <label className="block text-sm text-gray-400 mb-2">Enter Text</label>
+                    <label className="block text-sm text-gray-400 mb-2">{t('meditator.text.enterText')}</label>
                     <textarea
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         className="input-field h-48 resize-none"
-                        placeholder="Type or paste text to translate..."
+                        placeholder={t('meditator.text.enterText')}
                     />
                 </div>
                 <div>
-                    <label className="block text-sm text-gray-400 mb-2">Translation</label>
+                    <label className="block text-sm text-gray-400 mb-2">{t('bubble.panels.translate.translation')}</label>
                     <textarea
                         value={translatedText}
                         readOnly
                         className="input-field h-48 resize-none bg-white/5"
-                        placeholder="Translation will appear here..."
+                        placeholder={t('bubble.panels.translate.translation') + '...'}
                     />
                 </div>
             </div>
 
             <div className="mt-6 flex justify-center">
                 <Button onClick={handleTranslate} isLoading={isTranslating} className="px-8">
-                    Translate
+                    {t('meditator.text.translate')}
                 </Button>
             </div>
         </div>
@@ -1085,6 +1092,7 @@ function TextToSpeechFeature({ history, setHistory }) {
     const [savedTexts, setSavedTexts] = useLocalStorage('nexa.meditator.tts.saved', []);
     const utteranceRef = useRef(null);
     const synthRef = useRef(null);
+    const { t } = useTranslation();
 
     useEffect(() => {
         // Load available voices
@@ -1222,12 +1230,12 @@ function TextToSpeechFeature({ history, setHistory }) {
 
     return (
         <div className="glass-card p-6">
-            <h2 className="text-2xl font-bold mb-6">Dictate</h2>
+            <h2 className="text-2xl font-bold mb-6">{t('meditator.text.dictate')}</h2>
             
             <div className="space-y-6">
                 {/* Language Selection */}
                 <div>
-                    <label className="block text-sm text-gray-400 mb-2">Select Language</label>
+                    <label className="block text-sm text-gray-400 mb-2">{t('meditator.text.language')}</label>
                     <select
                         value={selectedLang}
                         onChange={(e) => {
@@ -1240,7 +1248,7 @@ function TextToSpeechFeature({ history, setHistory }) {
                     >
                         {LANGUAGES.map(lang => (
                             <option key={lang.code} value={lang.code} style={{ backgroundColor: '#111827', color: '#ffffff' }}>
-                                {lang.name} ({lang.nativeName})
+                                {t(`languages.${lang.code}`)} ({lang.nativeName})
                             </option>
                         ))}
                     </select>
@@ -1248,12 +1256,12 @@ function TextToSpeechFeature({ history, setHistory }) {
 
                 {/* Text Input */}
                 <div>
-                    <label className="block text-sm text-gray-400 mb-2">Enter Text to Speak</label>
+                    <label className="block text-sm text-gray-400 mb-2">{t('meditator.text.textToSpeak')}</label>
                     <textarea
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         className="input-field h-48 resize-none"
-                        placeholder="Type or paste the text you want to hear..."
+                        placeholder={t('meditator.text.textToSpeak') + '...'}
                         disabled={isSpeaking}
                     />
                 </div>
@@ -1261,7 +1269,7 @@ function TextToSpeechFeature({ history, setHistory }) {
                 {/* Speech Rate Control */}
                 <div>
                     <label className="block text-sm text-gray-400 mb-2">
-                        Speech Speed: {speechRate.toFixed(1)}x
+                        {t('meditator.text.speed')}: {speechRate.toFixed(1)}x
                     </label>
                     <div className="flex items-center gap-4">
                         <span className="text-xs text-gray-500">0.5x</span>
@@ -1305,12 +1313,12 @@ function TextToSpeechFeature({ history, setHistory }) {
                         {isSpeaking ? (
                             <>
                                 <VolumeX size={20} />
-                                Stop Speaking
+                                {t('meditator.text.stopSpeaking')}
                             </>
                         ) : (
                             <>
                                 <Volume2 size={20} />
-                                Speak Text
+                                {t('meditator.text.speak')}
                             </>
                         )}
                     </button>
@@ -1320,7 +1328,7 @@ function TextToSpeechFeature({ history, setHistory }) {
                         variant="secondary"
                         className="flex-1"
                     >
-                        Save Text
+                        {t('meditator.text.save')} {t('meditator.text.textToSpeak')}
                     </Button>
                     <Button 
                         onClick={() => {
@@ -1331,14 +1339,14 @@ function TextToSpeechFeature({ history, setHistory }) {
                         className="flex-1"
                         disabled={isSpeaking}
                     >
-                        Clear
+                        {t('common.clear')}
                     </Button>
                 </div>
 
                 {/* Saved Texts */}
                 {savedTexts.length > 0 && (
                     <div>
-                        <h3 className="text-lg font-semibold mb-3">Saved Texts</h3>
+                        <h3 className="text-lg font-semibold mb-3">{t('meditator.text.savedTexts')}</h3>
                         <div className="space-y-2 max-h-64 overflow-y-auto">
                             {savedTexts.map((item) => (
                                 <div key={item.id} className="p-3 bg-white/5 rounded-lg border border-white/10 flex items-start justify-between">
@@ -1356,14 +1364,14 @@ function TextToSpeechFeature({ history, setHistory }) {
                                             className="px-3 py-1 text-xs bg-blue-500/20 text-blue-400 rounded hover:bg-blue-500/30"
                                             disabled={isSpeaking}
                                         >
-                                            Load
+                                            {t('meditator.text.load')}
                                         </button>
                                         <button
                                             onClick={() => setSavedTexts(prev => prev.filter(t => t.id !== item.id))}
                                             className="px-3 py-1 text-xs bg-red-500/20 text-red-400 rounded hover:bg-red-500/30"
                                             disabled={isSpeaking}
                                         >
-                                            Delete
+                                            {t('common.delete')}
                                         </button>
                                     </div>
                                 </div>
@@ -1378,8 +1386,9 @@ function TextToSpeechFeature({ history, setHistory }) {
 
 // Voice History Component
 function VoiceHistory({ history, setHistory, onClose }) {
+    const { t } = useTranslation();
     const clearHistory = () => {
-        if (window.confirm('Are you sure you want to clear all history?')) {
+        if (window.confirm(t('meditator.history.clear') + '?')) {
             setHistory([]);
         }
     };
@@ -1387,11 +1396,11 @@ function VoiceHistory({ history, setHistory, onClose }) {
     return (
         <div className="glass-card p-6">
             <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Voice History</h2>
+                <h2 className="text-2xl font-bold">{t('meditator.voice.history')}</h2>
                 <div className="flex gap-2">
                     {history.length > 0 && (
                         <Button onClick={clearHistory} variant="secondary" icon={Trash2}>
-                            Clear All
+                            {t('meditator.history.clear')}
                         </Button>
                     )}
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded">
@@ -1401,7 +1410,7 @@ function VoiceHistory({ history, setHistory, onClose }) {
             </div>
 
             {history.length === 0 ? (
-                <p className="text-center text-gray-400 py-12">No history yet</p>
+                <p className="text-center text-gray-400 py-12">{t('meditator.history.noHistory')}</p>
             ) : (
                 <div className="space-y-4 max-h-[600px] overflow-y-auto">
                     {history.map((item) => (
@@ -1409,7 +1418,7 @@ function VoiceHistory({ history, setHistory, onClose }) {
                             <div className="flex items-start justify-between mb-2">
                                 <div>
                                     <span className="text-xs text-gray-400">
-                                        {item.mode === 'basic' ? 'Basic Translation' : 'Conversation'}
+                                        {item.mode === 'basic' ? t('meditator.voice.basicTranslation') : t('meditator.voice.conversationMode')}
                                     </span>
                                     <span className="text-xs text-gray-500 ml-2">
                                         {new Date(item.timestamp).toLocaleString()}
@@ -1424,11 +1433,11 @@ function VoiceHistory({ history, setHistory, onClose }) {
                             </div>
                             <div className="space-y-2">
                                 <div>
-                                    <p className="text-xs text-gray-400">Original:</p>
+                                    <p className="text-xs text-gray-400">{t('meditator.voice.original')}:</p>
                                     <p className="text-white">{item.originalText}</p>
                                 </div>
                                 <div>
-                                    <p className="text-xs text-gray-400">Translation:</p>
+                                    <p className="text-xs text-gray-400">{t('meditator.voice.translated')}:</p>
                                     <p className="text-blue-400">{item.translatedText}</p>
                                 </div>
                             </div>
@@ -1442,8 +1451,9 @@ function VoiceHistory({ history, setHistory, onClose }) {
 
 // Text History Component
 function TextHistory({ history, setHistory, onClose }) {
+    const { t } = useTranslation();
     const clearHistory = () => {
-        if (window.confirm('Are you sure you want to clear all history?')) {
+        if (window.confirm(t('meditator.history.clear') + '?')) {
             setHistory([]);
         }
     };
@@ -1451,11 +1461,11 @@ function TextHistory({ history, setHistory, onClose }) {
     return (
         <div className="glass-card p-6">
             <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-bold">Text History</h2>
+                <h2 className="text-2xl font-bold">{t('meditator.history.title')}</h2>
                 <div className="flex gap-2">
                     {history.length > 0 && (
                         <Button onClick={clearHistory} variant="secondary" icon={Trash2}>
-                            Clear All
+                            {t('meditator.history.clear')}
                         </Button>
                     )}
                     <button onClick={onClose} className="p-2 hover:bg-white/10 rounded">
@@ -1465,7 +1475,7 @@ function TextHistory({ history, setHistory, onClose }) {
             </div>
 
             {history.length === 0 ? (
-                <p className="text-center text-gray-400 py-12">No history yet</p>
+                <p className="text-center text-gray-400 py-12">{t('meditator.history.noHistory')}</p>
             ) : (
                 <div className="space-y-4 max-h-[600px] overflow-y-auto">
                     {history.map((item) => (
@@ -1473,7 +1483,7 @@ function TextHistory({ history, setHistory, onClose }) {
                             <div className="flex items-start justify-between mb-2">
                                 <div>
                                     <span className="text-xs text-gray-400">
-                                        {item.mode === 'translate' ? 'Translation' : item.mode === 'tts' ? 'Text to Speech' : 'Dictation'}
+                                        {item.mode === 'translate' ? t('meditator.text.normalTranslate') : item.mode === 'tts' ? t('meditator.text.dictate') : t('meditator.text.dictate')}
                                     </span>
                                     <span className="text-xs text-gray-500 ml-2">
                                         {new Date(item.timestamp).toLocaleString()}
@@ -1489,11 +1499,11 @@ function TextHistory({ history, setHistory, onClose }) {
                             {item.mode === 'translate' ? (
                                 <div className="space-y-2">
                                     <div>
-                                        <p className="text-xs text-gray-400">Original:</p>
+                                        <p className="text-xs text-gray-400">{t('meditator.voice.original')}:</p>
                                         <p className="text-white">{item.originalText}</p>
                                     </div>
                                     <div>
-                                        <p className="text-xs text-gray-400">Translation:</p>
+                                        <p className="text-xs text-gray-400">{t('meditator.voice.translated')}:</p>
                                         <p className="text-blue-400">{item.translatedText}</p>
                                     </div>
                                 </div>
@@ -1502,7 +1512,7 @@ function TextHistory({ history, setHistory, onClose }) {
                                     <p className="text-white">{item.text}</p>
                                     <p className="text-xs text-gray-500">
                                         {LANGUAGES.find(l => l.code === item.language)?.name || item.language} • 
-                                        {item.rate?.toFixed(1) || '1.0'}x speed
+                                        {item.rate?.toFixed(1) || '1.0'}x {t('meditator.text.speed').toLowerCase()}
                                     </p>
                                 </div>
                             ) : (

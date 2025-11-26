@@ -5,11 +5,12 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { motion } from 'framer-motion';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function Settings() {
     const { logout } = useAuth();
+    const { language, setLanguage, t } = useTranslation();
     const [isBubbleEnabled, setIsBubbleEnabled] = useLocalStorage('nexa.bubble.enabled', true);
-    const [language, setLanguage] = useLocalStorage('nexa.preferredLanguage', 'en');
     const [bubbleIcon, setBubbleIcon] = useLocalStorage('nexa.bubble.icon', 'bot');
 
     const languages = [
@@ -30,14 +31,14 @@ export default function Settings() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-12"
+                    className="mb-12 overflow-visible"
                 >
-                    <div className="flex items-center gap-4 mb-4">
-                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                            Settings
+                    <div className="flex items-start gap-4 mb-4 overflow-visible">
+                        <h1 className="text-4xl md:text-5xl font-bold heading-gradient leading-tight py-1 overflow-visible">
+                            {t('pages.settings.title')}
                         </h1>
                     </div>
-                    <p className="text-gray-400 ml-0">Manage your preferences and account</p>
+                    <p className="text-gray-400 ml-0">{t('pages.settings.subtitle')}</p>
                 </motion.div>
 
                 <div className="space-y-6">
@@ -45,11 +46,11 @@ export default function Settings() {
                     <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
                         <h2 className="text-xl font-semibold mb-4 text-gray-200 flex items-center gap-2">
                             <Bot size={20} className="text-blue-400" />
-                            Floating Bubble
+                            {t('settings.sections.bubble.title')}
                         </h2>
                         <div className="flex items-center justify-between py-3">
                             <div className="flex items-center gap-3">
-                                <span>Enable Bubble</span>
+                                <span>{t('settings.sections.bubble.enable')}</span>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input
@@ -62,7 +63,7 @@ export default function Settings() {
                             </label>
                         </div>
                         <p className="text-sm text-gray-500 mt-2">
-                            Changes will reload the page to apply.
+                            {t('settings.sections.bubble.description')}
                         </p>
                     </div>
 
@@ -70,10 +71,10 @@ export default function Settings() {
                     <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
                         <h2 className="text-xl font-semibold mb-4 text-gray-200 flex items-center gap-2">
                             <Bot size={20} className="text-blue-400" />
-                            Bubble Theme
+                            {t('settings.sections.bubbleTheme.title')}
                         </h2>
                         <div className="py-3">
-                            <p className="text-sm text-gray-400 mb-4">Choose your bubble icon:</p>
+                            <p className="text-sm text-gray-400 mb-4">{t('settings.sections.bubbleTheme.chooseIcon')}</p>
                             <div className="grid grid-cols-2 gap-3">
                                 {[
                                     { id: 'bot', icon: Bot, label: 'Bot', color: 'text-blue-400' },
@@ -102,11 +103,11 @@ export default function Settings() {
                     <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
                         <h2 className="text-xl font-semibold mb-4 text-gray-200 flex items-center gap-2">
                             <Globe size={20} className="text-purple-400" />
-                            Language
+                            {t('settings.sections.language.title')}
                         </h2>
                         <div className="flex items-center justify-between py-3">
                             <div className="flex items-center gap-3">
-                                <span>Preferred Language</span>
+                                <span>{t('settings.sections.language.preferred')}</span>
                             </div>
                             <select
                                 value={language}
@@ -123,11 +124,11 @@ export default function Settings() {
 
                     {/* Notifications Section */}
                     <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                        <h2 className="text-xl font-semibold mb-4 text-gray-200">Notifications</h2>
+                        <h2 className="text-xl font-semibold mb-4 text-gray-200">{t('settings.sections.notifications.title')}</h2>
                         <div className="flex items-center justify-between py-3 border-b border-white/5">
                             <div className="flex items-center gap-3">
                                 <Bell size={20} className="text-yellow-400" />
-                                <span>Email Notifications</span>
+                                <span>{t('settings.sections.notifications.email')}</span>
                             </div>
                             <label className="relative inline-flex items-center cursor-pointer">
                                 <input type="checkbox" className="sr-only peer" defaultChecked />
@@ -140,7 +141,7 @@ export default function Settings() {
                     <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
                         <h2 className="text-xl font-semibold mb-4 text-gray-200 flex items-center gap-2">
                             <LinkIcon size={20} className="text-green-400" />
-                            Quick Links
+                            {t('settings.sections.quickLinks.title')}
                         </h2>
                         <div className="space-y-2">
                             <Link
@@ -148,7 +149,7 @@ export default function Settings() {
                                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group"
                             >
                                 <FileText size={20} className="text-blue-400" />
-                                <span className="flex-1">Notes</span>
+                                <span className="flex-1">{t('nav.notes')}</span>
                                 <span className="text-gray-500 group-hover:text-white">→</span>
                             </Link>
                             <Link
@@ -156,7 +157,7 @@ export default function Settings() {
                                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group"
                             >
                                 <CheckSquare size={20} className="text-purple-400" />
-                                <span className="flex-1">Tasks</span>
+                                <span className="flex-1">{t('nav.tasks')}</span>
                                 <span className="text-gray-500 group-hover:text-white">→</span>
                             </Link>
                             <Link
@@ -164,7 +165,7 @@ export default function Settings() {
                                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group"
                             >
                                 <User size={20} className="text-pink-400" />
-                                <span className="flex-1">Profile</span>
+                                <span className="flex-1">{t('nav.profile')}</span>
                                 <span className="text-gray-500 group-hover:text-white">→</span>
                             </Link>
                             <Link
@@ -172,7 +173,7 @@ export default function Settings() {
                                 className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group"
                             >
                                 <Clock size={20} className="text-yellow-400" />
-                                <span className="flex-1">History</span>
+                                <span className="flex-1">{t('pages.chat.history')}</span>
                                 <span className="text-gray-500 group-hover:text-white">→</span>
                             </Link>
                         </div>
@@ -180,13 +181,13 @@ export default function Settings() {
 
                     {/* Account Section */}
                     <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                        <h2 className="text-xl font-semibold mb-4 text-gray-200">Account</h2>
+                        <h2 className="text-xl font-semibold mb-4 text-gray-200">{t('settings.sections.account.title')}</h2>
                         <button
                             onClick={logout}
                             className="w-full flex items-center justify-center gap-2 p-3 rounded-lg bg-red-500/10 text-red-400 hover:bg-red-500/20 transition-colors"
                         >
                             <LogOut size={20} />
-                            Sign Out
+                            {t('settings.sections.account.signOut')}
                         </button>
                     </div>
                 </div>

@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import NoteCard from '../components/Notes/NoteCard';
 import NoteEditor from '../components/Notes/NoteEditor';
 import api from '../api';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function Notes() {
     const [notes, setNotes] = useState([]);
@@ -11,6 +12,7 @@ export default function Notes() {
     const [searchQuery, setSearchQuery] = useState('');
     const [isEditorOpen, setIsEditorOpen] = useState(false);
     const [editingNote, setEditingNote] = useState(null);
+    const { t } = useTranslation();
 
     useEffect(() => {
         fetchNotes();
@@ -87,14 +89,14 @@ export default function Notes() {
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="mb-12"
+                    className="mb-12 overflow-visible"
                 >
-                    <div className="flex items-center gap-4 mb-4">
-                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-                            My Notes
+                    <div className="flex items-start gap-4 mb-4 overflow-visible">
+                        <h1 className="text-4xl md:text-5xl font-bold heading-gradient leading-tight py-1">
+                            {t('pages.notes.title')}
                         </h1>
                     </div>
-                    <p className="text-gray-400 ml-0">Capture your ideas and thoughts</p>
+                    <p className="text-gray-400 ml-0">{t('pages.notes.subtitle')}</p>
                 </motion.div>
 
                 <div className="flex flex-col md:flex-row justify-end items-center mb-12 gap-6">
@@ -103,7 +105,7 @@ export default function Notes() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />
                             <input
                                 type="text"
-                                placeholder="Search notes..."
+                                placeholder={t('pages.notes.searchPlaceholder')}
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
                                 className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-white focus:outline-none focus:border-blue-500 transition-colors"
@@ -129,7 +131,7 @@ export default function Notes() {
                         {/* Pinned Notes */}
                         {pinnedNotes.length > 0 && (
                             <div className="mb-12">
-                                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Pinned</h2>
+                                <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">{t('pages.notes.pinned')}</h2>
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                     <AnimatePresence>
                                         {pinnedNotes.map(note => (
@@ -149,7 +151,7 @@ export default function Notes() {
                         {otherNotes.length > 0 && (
                             <div>
                                 {pinnedNotes.length > 0 && (
-                                    <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">Others</h2>
+                                    <h2 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-4">{t('pages.notes.others')}</h2>
                                 )}
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                     <AnimatePresence>
@@ -172,8 +174,8 @@ export default function Notes() {
                                 <div className="inline-block p-6 rounded-full bg-white/5 mb-4">
                                     <Plus size={40} className="text-gray-400" />
                                 </div>
-                                <h3 className="text-xl font-semibold text-gray-300">No notes yet</h3>
-                                <p className="text-gray-500 mt-2">Click the + button to create your first note</p>
+                                <h3 className="text-xl font-semibold text-gray-300">{t('pages.notes.noNotes')}</h3>
+                                <p className="text-gray-500 mt-2">{t('pages.notes.createNote')}</p>
                             </div>
                         )}
                     </>

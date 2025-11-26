@@ -2,6 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './hooks/useAuth.jsx'
+import { TranslationProvider } from './hooks/useTranslation.jsx'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import Home from './pages/Home'
@@ -21,6 +22,19 @@ import './index.css'
 
 import Navbar from './components/Navbar'
 import Bubble from './components/Bubble/Bubble'
+
+// Register service worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+      .then((registration) => {
+        console.log('SW registered: ', registration)
+      })
+      .catch((registrationError) => {
+        console.log('SW registration failed: ', registrationError)
+      })
+  })
+}
 
 function AppRoutes() {
   const { token, loading } = useAuth()
@@ -61,14 +75,16 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter
-        future={{
-          v7_startTransition: true,
-          v7_relativeSplatPath: true
-        }}
-      >
-        <AppRoutes />
-      </BrowserRouter>
+      <TranslationProvider>
+        <BrowserRouter
+          future={{
+            v7_startTransition: true,
+            v7_relativeSplatPath: true
+          }}
+        >
+          <AppRoutes />
+        </BrowserRouter>
+      </TranslationProvider>
     </AuthProvider>
   )
 }

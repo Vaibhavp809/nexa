@@ -4,6 +4,7 @@ import { Button } from '../../ui/Button';
 import api from '../../api';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { clsx } from 'clsx';
+import { useTranslation } from '../../hooks/useTranslation';
 
 export function BubblePanel({ isOpen, activeTab: initialTab = 'chat' }) {
     const [activeTab, setActiveTab] = useState(initialTab);
@@ -18,8 +19,8 @@ export function BubblePanel({ isOpen, activeTab: initialTab = 'chat' }) {
     if (!isOpen) return null;
 
     return (
-        <div className="flex flex-col h-full">
-            <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
+        <div className="flex flex-col h-full w-full">
+            <div className="flex-1 overflow-y-auto p-2 sm:p-4 custom-scrollbar">
                 {activeTab === 'summarize' && <SummarizeTab />}
                 {activeTab === 'translate' && <TranslateTab />}
                 {activeTab === 'quicknotes' && <QuickNotesTab />}
@@ -147,6 +148,7 @@ function SummarizeTab() {
     const [summary, setSummary] = useState('');
     const [loading, setLoading] = useState(false);
     const [history, setHistory] = useLocalStorage('nexa.history.summarize', []);
+    const { t } = useTranslation();
 
     useEffect(() => {
         // Listen for text selection events from Bubble component
@@ -197,13 +199,13 @@ function SummarizeTab() {
             <textarea
                 value={text}
                 onChange={e => setText(e.target.value)}
-                placeholder="Paste text or select from page..."
+                placeholder={t('bubble.panels.summarize.placeholder')}
                 className="input-field h-32 resize-none text-sm"
             />
-            <Button onClick={handleSummarize} isLoading={loading} className="w-full">Summarize</Button>
+            <Button onClick={handleSummarize} isLoading={loading} className="w-full">{t('bubble.panels.summarize.button')}</Button>
             {summary && (
                 <div className="p-3 bg-white/5 rounded-lg text-sm border border-white/10">
-                    <h4 className="text-xs font-bold text-gray-400 mb-1">SUMMARY</h4>
+                    <h4 className="text-xs font-bold text-gray-400 mb-1">{t('bubble.panels.summarize.summary')}</h4>
                     <p className="text-gray-300">{summary}</p>
                 </div>
             )}
@@ -221,6 +223,7 @@ function TranslateTab() {
     const [isListening, setIsListening] = useState(false);
     const [transcript, setTranscript] = useState('');
     const recognitionRef = useRef(null);
+    const { t } = useTranslation();
 
     // Voice mode setup
     useEffect(() => {
@@ -370,7 +373,7 @@ Translated text (${targetLangName}):`;
                         mode === 'text' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' : 'bg-white/5 text-gray-400 border border-white/10'
                     }`}
                 >
-                    Text
+                    {t('bubble.panels.translate.textMode')}
                 </button>
                 <button
                     onClick={() => setMode('voice')}
@@ -378,14 +381,14 @@ Translated text (${targetLangName}):`;
                         mode === 'voice' ? 'bg-purple-500/20 text-purple-400 border border-purple-500/50' : 'bg-white/5 text-gray-400 border border-white/10'
                     }`}
                 >
-                    Voice
+                    {t('bubble.panels.translate.voiceMode')}
                 </button>
             </div>
 
             {/* Language Selection */}
             <div className="grid grid-cols-2 gap-2">
                 <div>
-                    <label className="block text-xs text-gray-400 mb-1">From</label>
+                    <label className="block text-xs text-gray-400 mb-1">{t('bubble.panels.translate.sourceLanguage')}</label>
                     <select
                         value={sourceLang}
                         onChange={e => setSourceLang(e.target.value)}
@@ -400,7 +403,7 @@ Translated text (${targetLangName}):`;
                     </select>
                 </div>
                 <div>
-                    <label className="block text-xs text-gray-400 mb-1">To</label>
+                    <label className="block text-xs text-gray-400 mb-1">{t('bubble.panels.translate.targetLanguage')}</label>
                     <select
                         value={targetLang}
                         onChange={e => setTargetLang(e.target.value)}
@@ -427,7 +430,7 @@ Translated text (${targetLangName}):`;
                         }`}
                     >
                         <Mic size={16} />
-                        {isListening ? 'Listening...' : 'Start Speaking'}
+                        {isListening ? t('bubble.panels.translate.listening') : t('bubble.panels.translate.startListening')}
                     </button>
                     {transcript && (
                         <div className="p-2 bg-white/5 rounded text-xs">
@@ -441,20 +444,20 @@ Translated text (${targetLangName}):`;
                 <textarea
                     value={text}
                     onChange={e => setText(e.target.value)}
-                    placeholder="Enter text to translate..."
+                    placeholder={t('bubble.panels.translate.enterText')}
                     className="input-field h-24 resize-none text-sm"
                 />
             )}
 
             {mode === 'text' && (
                 <Button onClick={() => handleTranslate()} isLoading={loading} className="w-full" disabled={!text.trim()}>
-                    Translate
+                    {t('bubble.panels.translate.translate')}
                 </Button>
             )}
 
             {translation && (
                 <div className="p-3 bg-white/5 rounded-lg text-sm border border-white/10">
-                    <h4 className="text-xs font-bold text-gray-400 mb-1">TRANSLATION</h4>
+                    <h4 className="text-xs font-bold text-gray-400 mb-1">{t('bubble.panels.translate.translation')}</h4>
                     <p className="text-gray-300">{translation}</p>
                 </div>
             )}
@@ -468,6 +471,7 @@ function QuickNotesTab() {
     const [saved, setSaved] = useState(false);
     const [notes, setNotes] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { t } = useTranslation();
 
     useEffect(() => {
         fetchNotes();
@@ -510,7 +514,7 @@ function QuickNotesTab() {
     };
 
     const handleDelete = async (noteId) => {
-        if (!window.confirm('Delete this note?')) return;
+        if (!window.confirm(t('common.delete') + ' ' + t('bubble.panels.quicknotes.title').toLowerCase() + '?')) return;
         try {
             await api.delete(`/notes/${noteId}`);
             setNotes(notes.filter(n => n._id !== noteId));
@@ -526,7 +530,7 @@ function QuickNotesTab() {
             <textarea
                 value={noteText}
                 onChange={e => setNoteText(e.target.value)}
-                placeholder="Type your quick note..."
+                placeholder={t('bubble.panels.quicknotes.title') + '...'}
                 className="input-field h-24 resize-none text-sm"
             />
             <Button 
@@ -535,15 +539,15 @@ function QuickNotesTab() {
                 className="w-full"
                 disabled={!noteText.trim()}
             >
-                {saved ? 'Saved!' : 'Save Note'}
+                {saved ? t('common.save') + '!' : t('common.save') + ' ' + t('bubble.panels.quicknotes.title')}
             </Button>
             
             <div className="border-t border-white/10 pt-3">
-                <h4 className="text-xs font-bold text-gray-400 mb-2">Saved Notes</h4>
+                <h4 className="text-xs font-bold text-gray-400 mb-2">{t('bubble.panels.quicknotes.title')}</h4>
                 {loading ? (
-                    <p className="text-xs text-gray-500 text-center py-4">Loading...</p>
+                    <p className="text-xs text-gray-500 text-center py-4">{t('common.loading')}</p>
                 ) : notes.length === 0 ? (
-                    <p className="text-xs text-gray-500 text-center py-4">No notes saved yet</p>
+                    <p className="text-xs text-gray-500 text-center py-4">{t('bubble.panels.quicknotes.noNotes')}</p>
                 ) : (
                     <div className="space-y-2 max-h-[300px] overflow-y-auto">
                         {notes.map((note) => (

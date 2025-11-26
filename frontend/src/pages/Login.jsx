@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth.jsx';
 import { Button } from '../ui/Button';
 import { LogIn, Eye, EyeOff } from 'lucide-react';
 import api from '../api';
+import { useTranslation } from '../hooks/useTranslation';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -19,6 +20,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -94,11 +96,11 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
-      <div className="w-full max-w-md p-8 rounded-2xl bg-white/5 border border-white/10 shadow-lg">
-        <h2 className="text-4xl font-bold text-center mb-2 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
-          Welcome Back
+      <div className="w-full max-w-md p-8 rounded-2xl bg-white/5 border border-white/10 shadow-lg overflow-visible">
+        <h2 className="text-4xl font-bold text-center mb-2 heading-gradient leading-tight py-1 overflow-visible">
+          {t('auth.login.title')}
         </h2>
-        <p className="text-center text-gray-400 mb-8">Sign in to continue to Nexa</p>
+        <p className="text-center text-gray-400 mb-8">{t('auth.login.subtitle')}</p>
 
         {error && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/50 rounded text-red-500 text-sm text-center">
@@ -108,7 +110,7 @@ export default function Login() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Email</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">{t('auth.login.email')}</label>
             <input
               type="email"
               value={email}
@@ -120,7 +122,7 @@ export default function Login() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-300 mb-1">Password</label>
+            <label className="block text-sm font-medium text-gray-300 mb-1">{t('auth.login.password')}</label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
@@ -146,12 +148,12 @@ export default function Login() {
               onClick={() => setShowForgotPassword(true)}
               className="text-sm text-blue-400 hover:text-purple-400 transition-colors"
             >
-              Forgot Password?
+              {t('auth.login.forgotPassword')}
             </button>
           </div>
 
           <Button type="submit" className="w-full" isLoading={loading} icon={LogIn}>
-            Sign In
+            {t('auth.login.signIn')}
           </Button>
         </form>
 
@@ -255,9 +257,9 @@ export default function Login() {
 
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-400">
-            Don't have an account?{' '}
+            {t('auth.login.noAccount')}{' '}
             <Link to="/register" className="text-blue-400 hover:text-purple-400 transition-colors font-semibold">
-              Sign up
+              {t('auth.login.signUp')}
             </Link>
           </p>
         </div>
