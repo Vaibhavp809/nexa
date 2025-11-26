@@ -18,12 +18,14 @@ export default function GroqDemo() {
     setLoading(true);
     try {
       const res = await api.post('/groq/generate', { prompt });
-      const result = res.data;
-      setResponse(result);
-      setHistory(prev => [{ prompt, response: result.response, timestamp: new Date().toISOString() }, ...prev]);
+      // Backend returns: { ok: true, data: "message content", model: "..." }
+      // Extract just the message content from res.data.data
+      const messageContent = res.data?.data || res.data?.message || 'No response received.';
+      setResponse(messageContent);
+      setHistory(prev => [{ prompt, response: messageContent, timestamp: new Date().toISOString() }, ...prev]);
     } catch (err) {
       console.error(err);
-      setResponse({ error: 'Failed to fetch response' });
+      setResponse('Failed to fetch response');
     } finally {
       setLoading(false);
     }
@@ -67,9 +69,9 @@ export default function GroqDemo() {
               <div className="glass-card p-6 border-neon-blue/30">
                 <h3 className="text-lg font-bold mb-4 text-neon-blue">Response</h3>
                 <div className="bg-black/30 p-4 rounded-lg overflow-x-auto">
-                  <pre className="text-sm text-gray-300 whitespace-pre-wrap">
-                    {JSON.stringify(response, null, 2)}
-                  </pre>
+                  <p className="text-sm text-gray-300 whitespace-pre-wrap">
+                    {response}
+                  </p>
                 </div>
               </div>
             )}
@@ -90,7 +92,7 @@ export default function GroqDemo() {
               {history.map((item, i) => (
                 <div key={i} className="glass-card p-3 text-sm hover:bg-white/5 transition-colors cursor-pointer" onClick={() => {
                   setPrompt(item.prompt);
-                  setResponse({ response: item.response });
+                  setResponse(item.response);
                 }}>
                   <p className="font-medium text-white truncate mb-1">{item.prompt}</p>
                   <p className="text-gray-500 text-xs truncate">{item.response}</p>

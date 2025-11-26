@@ -24,6 +24,29 @@
   .input-field {
     @apply w-full px-4 py-2 rounded-lg bg-black/20 border border-white/10 focus:border-neon-blue/50 focus:ring-1 focus:ring-neon-blue/50 outline-none transition-all duration-300 text-white placeholder-gray-500;
   }
+  
+  /* Select dropdown dark theme styling */
+  select {
+    @apply bg-black/20 border border-white/10 text-white;
+    background-color: rgba(0, 0, 0, 0.2) !important;
+    color: #ffffff !important;
+  }
+  
+  select:focus {
+    @apply border-neon-blue/50 outline-none;
+  }
+  
+  select option {
+    background-color: #111827 !important;
+    color: #ffffff !important;
+  }
+  
+  select option:hover,
+  select option:focus,
+  select option:checked {
+    background-color: #1f2937 !important;
+    color: #ffffff !important;
+  }
 
   .neon-icon {
     @apply drop-shadow-[0_0_2px_rgba(0,179,255,0.8)];

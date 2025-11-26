@@ -1,9 +1,26 @@
-import React from 'react';
-import { Settings as SettingsIcon, LogOut, Moon, Sun, Bell } from 'lucide-react';
+import React, { useState } from 'react';
+import { Settings as SettingsIcon, LogOut, Moon, Sun, Bell, Bot, Globe, FileText, CheckSquare, User, Clock, Link as LinkIcon } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 export default function Settings() {
     const { logout } = useAuth();
+    const [isBubbleEnabled, setIsBubbleEnabled] = useLocalStorage('nexa.bubble.enabled', true);
+    const [language, setLanguage] = useLocalStorage('nexa.preferredLanguage', 'en');
+    const [theme, setTheme] = useLocalStorage('nexa.theme', 'dark');
+
+    const languages = [
+        { code: 'en', name: 'English' },
+        { code: 'hi', name: 'Hindi' },
+        { code: 'mr', name: 'Marathi' },
+        { code: 'kn', name: 'Kannada' },
+    ];
+
+    const handleBubbleToggle = () => {
+        setIsBubbleEnabled(!isBubbleEnabled);
+        setTimeout(() => window.location.reload(), 300);
+    };
 
     return (
         <div className="min-h-screen bg-black text-white p-6 md:p-12 pt-24">
@@ -14,17 +31,66 @@ export default function Settings() {
                 </h1>
 
                 <div className="space-y-6">
+                    {/* Bubble Section */}
+                    <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                        <h2 className="text-xl font-semibold mb-4 text-gray-200 flex items-center gap-2">
+                            <Bot size={20} className="text-blue-400" />
+                            Floating Bubble
+                        </h2>
+                        <div className="flex items-center justify-between py-3">
+                            <div className="flex items-center gap-3">
+                                <span>Enable Bubble</span>
+                            </div>
+                            <label className="relative inline-flex items-center cursor-pointer">
+                                <input
+                                    type="checkbox"
+                                    checked={isBubbleEnabled}
+                                    onChange={handleBubbleToggle}
+                                    className="sr-only peer"
+                                />
+                                <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            </label>
+                        </div>
+                        <p className="text-sm text-gray-500 mt-2">
+                            Changes will reload the page to apply.
+                        </p>
+                    </div>
+
                     {/* Appearance Section */}
                     <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
-                        <h2 className="text-xl font-semibold mb-4 text-gray-200">Appearance</h2>
+                        <h2 className="text-xl font-semibold mb-4 text-gray-200 flex items-center gap-2">
+                            <Moon size={20} className="text-blue-400" />
+                            Appearance
+                        </h2>
                         <div className="flex items-center justify-between py-3 border-b border-white/5">
                             <div className="flex items-center gap-3">
-                                <Moon size={20} className="text-blue-400" />
-                                <span>Dark Mode</span>
+                                <span>Theme</span>
                             </div>
-                            <div className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm font-medium">
-                                Always On
+                            <select
+                                value={theme}
+                                onChange={(e) => setTheme(e.target.value)}
+                                className="bg-black/20 border border-white/10 rounded px-3 py-1 text-sm text-white"
+                                style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+                            >
+                                <option value="dark" style={{ backgroundColor: '#111827', color: '#ffffff' }}>Dark</option>
+                                <option value="light" style={{ backgroundColor: '#111827', color: '#ffffff' }}>Light</option>
+                            </select>
+                        </div>
+                        <div className="flex items-center justify-between py-3">
+                            <div className="flex items-center gap-3">
+                                <Globe size={20} className="text-purple-400" />
+                                <span>Preferred Language</span>
                             </div>
+                            <select
+                                value={language}
+                                onChange={(e) => setLanguage(e.target.value)}
+                                className="bg-black/20 border border-white/10 rounded px-3 py-1 text-sm text-white"
+                                style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+                            >
+                                {languages.map(lang => (
+                                    <option key={lang.code} value={lang.code} style={{ backgroundColor: '#111827', color: '#ffffff' }}>{lang.name}</option>
+                                ))}
+                            </select>
                         </div>
                     </div>
 
@@ -40,6 +106,48 @@ export default function Settings() {
                                 <input type="checkbox" className="sr-only peer" defaultChecked />
                                 <div className="w-11 h-6 bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                             </label>
+                        </div>
+                    </div>
+
+                    {/* Navigation Section */}
+                    <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                        <h2 className="text-xl font-semibold mb-4 text-gray-200 flex items-center gap-2">
+                            <LinkIcon size={20} className="text-green-400" />
+                            Quick Links
+                        </h2>
+                        <div className="space-y-2">
+                            <Link
+                                to="/notes"
+                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group"
+                            >
+                                <FileText size={20} className="text-blue-400" />
+                                <span className="flex-1">Notes</span>
+                                <span className="text-gray-500 group-hover:text-white">→</span>
+                            </Link>
+                            <Link
+                                to="/tasks"
+                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group"
+                            >
+                                <CheckSquare size={20} className="text-purple-400" />
+                                <span className="flex-1">Tasks</span>
+                                <span className="text-gray-500 group-hover:text-white">→</span>
+                            </Link>
+                            <Link
+                                to="/profile"
+                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group"
+                            >
+                                <User size={20} className="text-pink-400" />
+                                <span className="flex-1">Profile</span>
+                                <span className="text-gray-500 group-hover:text-white">→</span>
+                            </Link>
+                            <Link
+                                to="/history"
+                                className="flex items-center gap-3 p-3 rounded-lg hover:bg-white/5 transition-colors group"
+                            >
+                                <Clock size={20} className="text-yellow-400" />
+                                <span className="flex-1">History</span>
+                                <span className="text-gray-500 group-hover:text-white">→</span>
+                            </Link>
                         </div>
                     </div>
 

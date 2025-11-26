@@ -1,7 +1,28 @@
 import express from 'express';
 import fetch from 'node-fetch';
+import jwt from 'jsonwebtoken';
 
 const router = express.Router();
+
+// Middleware to verify token
+const verifyToken = (req, res, next) => {
+    let token = req.cookies.nexa_token;
+
+    if (!token) {
+        const auth = req.headers.authorization;
+        if (auth) token = auth.split(' ')[1];
+    }
+
+    if (!token) return res.status(401).json({ message: 'No token', error: 'Authentication required' });
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.userId = decoded.id;
+        next();
+    } catch (err) {
+        res.status(401).json({ message: 'Invalid token', error: 'Authentication failed' });
+    }
+};
 
 // Fallback models in order of preference
 const FALLBACK_MODELS = [
@@ -59,7 +80,8 @@ async function callGroqWithFallback(url, key, prompt, modelIndex = 0) {
 // Proxy endpoint to call Groq API.
 // Expects JSON: { prompt: "..." }
 // Requires GROQ_API_KEY and GROQ_API_URL in env.
-router.post('/generate', async (req, res) => {
+// Requires authentication token
+router.post('/generate', verifyToken, async (req, res) => {
   try {
     const { prompt } = req.body;
     if (!prompt) return res.status(400).json({ message: 'Missing prompt' });

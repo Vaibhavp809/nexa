@@ -6,7 +6,10 @@ const UserSchema = new mongoose.Schema({
   password: { type: String, required: true },
   preferredLanguage: { type: String, default: 'en' },
   avatar: { type: String, default: '' },
-  bio: { type: String, default: '' }
+  securityQuestion: { type: String, required: true },
+  securityAnswer: { type: String, required: true }, // Will be hashed
+  resetPasswordCode: { type: String, default: null },
+  resetPasswordExpires: { type: Date, default: null }
 }, { timestamps: true });
 
 export default mongoose.model('User', UserSchema);

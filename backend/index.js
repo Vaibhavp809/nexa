@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import authRoutes from './routes/auth.js';
 import groqRoutes from './routes/groq.js';
 import notesRoutes from './routes/notes.js';
+import tasksRoutes from './routes/tasks.js';
 
 dotenv.config();
 
@@ -35,6 +36,7 @@ app.use(express.json());
 app.use('/api/auth', authRoutes);
 app.use('/api/groq', groqRoutes);
 app.use('/api/notes', notesRoutes);
+app.use('/api/tasks', tasksRoutes);
 
 const PORT = process.env.PORT || 4000;
 

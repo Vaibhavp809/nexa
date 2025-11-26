@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Home, FileText, User, Settings, LogOut, MessageSquare } from 'lucide-react';
+import { Home, FileText, User, Settings, LogOut, MessageSquare, CheckSquare, Languages } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 
 export default function Navbar() {
@@ -12,7 +12,9 @@ export default function Navbar() {
     const navItems = [
         { path: '/', icon: Home, label: 'Home' },
         { path: '/notes', icon: FileText, label: 'Notes' },
+        { path: '/tasks', icon: CheckSquare, label: 'Tasks' },
         { path: '/groq', icon: MessageSquare, label: 'Chat' },
+        { path: '/meditator', icon: Languages, label: 'Meditator' },
         { path: '/profile', icon: User, label: 'Profile' },
         { path: '/settings', icon: Settings, label: 'Settings' },
     ];
