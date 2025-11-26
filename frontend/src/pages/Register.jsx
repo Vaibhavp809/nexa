@@ -62,9 +62,9 @@ export default function Register() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
-      <div className="w-full max-w-md p-8 glass-card shadow-neon-violet">
-        <h2 className="text-3xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-neon-violet to-neon-blue">
+    <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
+      <div className="w-full max-w-md p-8 rounded-2xl bg-white/5 border border-white/10 shadow-lg">
+        <h2 className="text-4xl font-bold text-center mb-2 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
           Create Account
         </h2>
         <p className="text-center text-gray-400 mb-8">Join the future of AI</p>
@@ -187,7 +187,7 @@ export default function Register() {
             />
             <label htmlFor="terms" className="text-sm text-gray-300 cursor-pointer">
               I agree to the{' '}
-              <Link to="/terms" className="text-neon-blue hover:underline" target="_blank">
+              <Link to="/terms" className="text-blue-400 hover:text-purple-400 hover:underline transition-colors" target="_blank">
                 Terms and Conditions
               </Link>
             </label>
@@ -201,7 +201,7 @@ export default function Register() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-400">
             Already have an account?{' '}
-            <Link to="/login" className="text-neon-violet hover:text-neon-blue transition-colors">
+            <Link to="/login" className="text-blue-400 hover:text-purple-400 transition-colors font-semibold">
               Sign in
             </Link>
           </p>

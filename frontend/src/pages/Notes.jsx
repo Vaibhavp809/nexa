@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
 import { Plus, Search, Loader } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import NoteCard from '../components/Notes/NoteCard';
 import NoteEditor from '../components/Notes/NoteEditor';
+import api from '../api';
 
 export default function Notes() {
     const [notes, setNotes] = useState([]);
@@ -14,18 +14,21 @@ export default function Notes() {
 
     useEffect(() => {
         fetchNotes();
+        // Refresh notes when saved from bubble
+        const handleNotesUpdate = () => fetchNotes();
+        window.addEventListener('nexa-notes-updated', handleNotesUpdate);
+        return () => window.removeEventListener('nexa-notes-updated', handleNotesUpdate);
     }, []);
 
     const fetchNotes = async () => {
         try {
-            const token = localStorage.getItem('token');
-            const response = await axios.get('http://localhost:4000/api/notes', {
-                headers: { Authorization: `Bearer ${token}` },
-                withCredentials: true
-            });
-            setNotes(response.data);
+            const response = await api.get('/notes');
+            const allNotes = response.data || [];
+            // Filter out voice notes - they should only appear in VoiceNotes feature
+            setNotes(allNotes.filter(note => note.type !== 'voice'));
         } catch (error) {
             console.error('Error fetching notes:', error);
+            setNotes([]);
         } finally {
             setLoading(false);
         }
@@ -33,31 +36,19 @@ export default function Notes() {
 
     const handleSaveNote = async (noteData) => {
         try {
-            const token = localStorage.getItem('token');
-            const config = {
-                headers: { Authorization: `Bearer ${token}` },
-                withCredentials: true
-            };
-
             if (noteData._id) {
                 // Update existing note
-                const response = await axios.put(
-                    `http://localhost:4000/api/notes/${noteData._id}`,
-                    noteData,
-                    config
-                );
+                const response = await api.put(`/notes/${noteData._id}`, noteData);
                 setNotes(notes.map(n => n._id === noteData._id ? response.data : n));
             } else {
                 // Create new note
-                const response = await axios.post(
-                    'http://localhost:4000/api/notes',
-                    noteData,
-                    config
-                );
+                const response = await api.post('/notes', noteData);
                 setNotes([response.data, ...notes]);
             }
             setIsEditorOpen(false);
             setEditingNote(null);
+            // Notify bubble about notes update
+            window.dispatchEvent(new CustomEvent('nexa-notes-updated'));
         } catch (error) {
             console.error('Error saving note:', error);
         }
@@ -67,12 +58,10 @@ export default function Notes() {
         if (!window.confirm('Are you sure you want to delete this note?')) return;
 
         try {
-            const token = localStorage.getItem('token');
-            await axios.delete(`http://localhost:4000/api/notes/${noteId}`, {
-                headers: { Authorization: `Bearer ${token}` },
-                withCredentials: true
-            });
+            await api.delete(`/notes/${noteId}`);
             setNotes(notes.filter(n => n._id !== noteId));
+            // Notify bubble about notes update
+            window.dispatchEvent(new CustomEvent('nexa-notes-updated'));
         } catch (error) {
             console.error('Error deleting note:', error);
         }
@@ -92,17 +81,23 @@ export default function Notes() {
     const otherNotes = filteredNotes.filter(n => !n.isPinned);
 
     return (
-        <div className="min-h-screen bg-black text-white p-6 md:p-12 pt-24">
+        <div className="min-h-screen bg-black text-white pt-28 pb-12 px-6 md:px-12">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
-                    <div>
-                        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent mb-2">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-12"
+                >
+                    <div className="flex items-center gap-4 mb-4">
+                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
                             My Notes
                         </h1>
-                        <p className="text-gray-400">Capture your ideas and thoughts</p>
                     </div>
+                    <p className="text-gray-400 ml-0">Capture your ideas and thoughts</p>
+                </motion.div>
 
+                <div className="flex flex-col md:flex-row justify-end items-center mb-12 gap-6">
                     <div className="flex items-center gap-4 w-full md:w-auto">
                         <div className="relative flex-1 md:w-80">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />

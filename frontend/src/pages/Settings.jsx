@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
-import { Settings as SettingsIcon, LogOut, Moon, Sun, Bell, Bot, Globe, FileText, CheckSquare, User, Clock, Link as LinkIcon } from 'lucide-react';
+import { Settings as SettingsIcon, LogOut, Moon, Sun, Bell, Bot, Globe, FileText, CheckSquare, User, Clock, Link as LinkIcon, Sparkles, Zap, CircleDot } from 'lucide-react';
+import { clsx } from 'clsx';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { motion } from 'framer-motion';
 
 export default function Settings() {
     const { logout } = useAuth();
     const [isBubbleEnabled, setIsBubbleEnabled] = useLocalStorage('nexa.bubble.enabled', true);
     const [language, setLanguage] = useLocalStorage('nexa.preferredLanguage', 'en');
-    const [theme, setTheme] = useLocalStorage('nexa.theme', 'dark');
+    const [bubbleIcon, setBubbleIcon] = useLocalStorage('nexa.bubble.icon', 'bot');
 
     const languages = [
         { code: 'en', name: 'English' },
@@ -23,12 +25,20 @@ export default function Settings() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white p-6 md:p-12 pt-24">
+        <div className="min-h-screen bg-black text-white pt-28 pb-12 px-6 md:px-12">
             <div className="max-w-2xl mx-auto">
-                <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
-                    <SettingsIcon className="text-purple-500" />
-                    Settings
-                </h1>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-12"
+                >
+                    <div className="flex items-center gap-4 mb-4">
+                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                            Settings
+                        </h1>
+                    </div>
+                    <p className="text-gray-400 ml-0">Manage your preferences and account</p>
+                </motion.div>
 
                 <div className="space-y-6">
                     {/* Bubble Section */}
@@ -56,29 +66,46 @@ export default function Settings() {
                         </p>
                     </div>
 
+                    {/* Bubble Theme Section */}
+                    <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
+                        <h2 className="text-xl font-semibold mb-4 text-gray-200 flex items-center gap-2">
+                            <Bot size={20} className="text-blue-400" />
+                            Bubble Theme
+                        </h2>
+                        <div className="py-3">
+                            <p className="text-sm text-gray-400 mb-4">Choose your bubble icon:</p>
+                            <div className="grid grid-cols-2 gap-3">
+                                {[
+                                    { id: 'bot', icon: Bot, label: 'Bot', color: 'text-blue-400' },
+                                    { id: 'sparkles', icon: Sparkles, label: 'Sparkles', color: 'text-purple-400' },
+                                    { id: 'zap', icon: Zap, label: 'Zap', color: 'text-yellow-400' },
+                                    { id: 'circle', icon: CircleDot, label: 'Circle', color: 'text-green-400' },
+                                ].map(({ id, icon: Icon, label, color }) => (
+                                    <button
+                                        key={id}
+                                        onClick={() => setBubbleIcon(id)}
+                                        className={`p-4 rounded-lg border-2 transition-all flex flex-col items-center gap-2 ${
+                                            bubbleIcon === id
+                                                ? 'border-neon-blue bg-neon-blue/10'
+                                                : 'border-white/10 hover:border-white/20'
+                                        }`}
+                                    >
+                                        <Icon className={clsx("w-8 h-8", color)} />
+                                        <span className="text-sm text-gray-300">{label}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+
                     {/* Appearance Section */}
                     <div className="bg-white/5 rounded-2xl p-6 border border-white/10">
                         <h2 className="text-xl font-semibold mb-4 text-gray-200 flex items-center gap-2">
-                            <Moon size={20} className="text-blue-400" />
-                            Appearance
+                            <Globe size={20} className="text-purple-400" />
+                            Language
                         </h2>
-                        <div className="flex items-center justify-between py-3 border-b border-white/5">
-                            <div className="flex items-center gap-3">
-                                <span>Theme</span>
-                            </div>
-                            <select
-                                value={theme}
-                                onChange={(e) => setTheme(e.target.value)}
-                                className="bg-black/20 border border-white/10 rounded px-3 py-1 text-sm text-white"
-                                style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
-                            >
-                                <option value="dark" style={{ backgroundColor: '#111827', color: '#ffffff' }}>Dark</option>
-                                <option value="light" style={{ backgroundColor: '#111827', color: '#ffffff' }}>Light</option>
-                            </select>
-                        </div>
                         <div className="flex items-center justify-between py-3">
                             <div className="flex items-center gap-3">
-                                <Globe size={20} className="text-purple-400" />
                                 <span>Preferred Language</span>
                             </div>
                             <select

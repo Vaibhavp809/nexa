@@ -93,9 +93,9 @@ export default function Login() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen p-4">
-      <div className="w-full max-w-md p-8 glass-card shadow-neon">
-        <h2 className="text-3xl font-bold text-center mb-2 text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-neon-violet">
+    <div className="min-h-screen bg-black text-white flex items-center justify-center p-4">
+      <div className="w-full max-w-md p-8 rounded-2xl bg-white/5 border border-white/10 shadow-lg">
+        <h2 className="text-4xl font-bold text-center mb-2 bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
           Welcome Back
         </h2>
         <p className="text-center text-gray-400 mb-8">Sign in to continue to Nexa</p>
@@ -144,7 +144,7 @@ export default function Login() {
             <button
               type="button"
               onClick={() => setShowForgotPassword(true)}
-              className="text-sm text-neon-blue hover:text-neon-violet transition-colors"
+              className="text-sm text-blue-400 hover:text-purple-400 transition-colors"
             >
               Forgot Password?
             </button>
@@ -256,7 +256,7 @@ export default function Login() {
         <div className="mt-6 text-center">
           <p className="text-sm text-gray-400">
             Don't have an account?{' '}
-            <Link to="/register" className="text-neon-blue hover:text-neon-violet transition-colors">
+            <Link to="/register" className="text-blue-400 hover:text-purple-400 transition-colors font-semibold">
               Sign up
             </Link>
           </p>

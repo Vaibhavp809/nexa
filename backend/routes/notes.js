@@ -37,13 +37,14 @@ router.get('/', verifyToken, async (req, res) => {
 // Create note
 router.post('/', verifyToken, async (req, res) => {
     try {
-        const { title, content, color, isPinned } = req.body;
+        const { title, content, color, isPinned, type } = req.body;
         const note = new Note({
             userId: req.userId,
             title,
             content,
             color,
-            isPinned
+            isPinned,
+            type: type || 'text' // Default to 'text' if not specified
         });
         await note.save();
         res.json(note);

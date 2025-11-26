@@ -3,6 +3,7 @@ import { Mic, MicOff, FileText, Languages, Send, MessageSquare, Volume2, VolumeX
 import { Button } from '../ui/Button';
 import Bubble from '../components/Bubble/Bubble';
 import api from '../api';
+import { motion } from 'framer-motion';
 
 export default function Workspace() {
     // Voice Interface State
@@ -71,14 +72,20 @@ export default function Workspace() {
     };
 
     return (
-        <div className="min-h-screen bg-black text-white p-6 md:p-12 pt-24">
+        <div className="min-h-screen bg-black text-white p-6 md:p-12 pt-28">
             <div className="max-w-7xl mx-auto">
-                <div className="mb-8">
-                    <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent mb-2">
-                        Workspace
-                    </h1>
-                    <p className="text-gray-400">Your AI-powered workspace - Voice & Text interfaces</p>
-                </div>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-12"
+                >
+                    <div className="flex items-center gap-4 mb-4">
+                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                            Workspace
+                        </h1>
+                    </div>
+                    <p className="text-gray-400 ml-0">Your AI-powered workspace - Voice & Text interfaces</p>
+                </motion.div>
 
                 {/* Split Layout: Voice (First Half) + Text (Second Half) */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

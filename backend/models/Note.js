@@ -22,6 +22,11 @@ const noteSchema = new mongoose.Schema({
     isPinned: {
         type: Boolean,
         default: false
+    },
+    type: {
+        type: String,
+        enum: ['text', 'voice'],
+        default: 'text'
     }
 }, { timestamps: true });
 

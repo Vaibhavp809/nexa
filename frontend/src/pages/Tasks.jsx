@@ -105,17 +105,23 @@ export default function Tasks() {
     const completedTasks = filteredTasks.filter(t => t.completed);
 
     return (
-        <div className="min-h-screen bg-black text-white p-6 md:p-12 pt-24">
+        <div className="min-h-screen bg-black text-white pt-28 pb-12 px-6 md:px-12">
             <div className="max-w-4xl mx-auto">
                 {/* Header */}
-                <div className="flex flex-col md:flex-row justify-between items-center mb-12 gap-6">
-                    <div>
-                        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-600 bg-clip-text text-transparent mb-2">
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-12"
+                >
+                    <div className="flex items-center gap-4 mb-4">
+                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
                             Tasks & Reminders
                         </h1>
-                        <p className="text-gray-400">Stay organized and on track</p>
                     </div>
+                    <p className="text-gray-400 ml-0">Stay organized and on track</p>
+                </motion.div>
 
+                <div className="flex flex-col md:flex-row justify-end items-center mb-12 gap-6">
                     <div className="flex items-center gap-4 w-full md:w-auto">
                         <div className="relative flex-1 md:w-80">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={20} />

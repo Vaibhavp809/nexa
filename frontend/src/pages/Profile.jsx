@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../api';
 import { User, Mail, Globe, Save, Lock, Eye, EyeOff } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { motion } from 'framer-motion';
 
 // Temporary duplicate of languages since we can't import from backend easily in frontend
 const LANGS = [
@@ -128,15 +129,23 @@ export default function Profile() {
         }
     };
 
-    if (loading) return <div className="min-h-screen bg-black text-white pt-24 flex justify-center">Loading...</div>;
+    if (loading) return <div className="min-h-screen bg-black text-white pt-28 flex justify-center">Loading...</div>;
 
     return (
-        <div className="min-h-screen bg-black text-white p-6 md:p-12 pt-24">
+        <div className="min-h-screen bg-black text-white p-6 md:p-12 pt-28">
             <div className="max-w-2xl mx-auto bg-white/5 rounded-2xl p-8 border border-white/10">
-                <h1 className="text-3xl font-bold mb-8 flex items-center gap-3">
-                    <User className="text-blue-500" />
-                    Edit Profile
-                </h1>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-8"
+                >
+                    <div className="flex items-center gap-4 mb-4">
+                        <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-500 to-pink-500 bg-clip-text text-transparent">
+                            Edit Profile
+                        </h1>
+                    </div>
+                    <p className="text-gray-400 ml-0">Manage your account settings</p>
+                </motion.div>
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Email (Editable) */}

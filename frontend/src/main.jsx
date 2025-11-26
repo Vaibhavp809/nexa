@@ -16,6 +16,7 @@ import History from './pages/History'
 import Widget from './pages/Widget'
 import LanguageSelection from './pages/LanguageSelection'
 import Meditator from './pages/Meditator'
+import Notifications from './pages/Notifications'
 import './index.css'
 
 import Navbar from './components/Navbar'
@@ -49,6 +50,7 @@ function AppRoutes() {
         <Route path='/history' element={token ? <History /> : <Navigate to='/login' />} />
         <Route path='/language-selection' element={token ? <LanguageSelection /> : <Navigate to='/login' />} />
         <Route path='/meditator' element={token ? <Meditator /> : <Navigate to='/login' />} />
+        <Route path='/notifications' element={token ? <Notifications /> : <Navigate to='/login' />} />
         <Route path='/onboarding' element={<Onboarding />} />
         <Route path='/widget' element={<Widget />} />
       </Routes>
@@ -59,7 +61,12 @@ function AppRoutes() {
 function App() {
   return (
     <AuthProvider>
-      <BrowserRouter>
+      <BrowserRouter
+        future={{
+          v7_startTransition: true,
+          v7_relativeSplatPath: true
+        }}
+      >
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>

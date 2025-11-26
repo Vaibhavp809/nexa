@@ -1,23 +1,37 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bot, X, Maximize2, Minimize2, MessageSquare, FileText, Languages, StickyNote, Settings } from 'lucide-react';
+import { Bot, X, Maximize2, Minimize2, MessageSquare, FileText, Languages, StickyNote, Settings, Sparkles, Zap, CircleDot, Mic, Search, Calendar } from 'lucide-react';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
 import { BubblePanel } from './BubblePanel';
 import { clsx } from 'clsx';
+import api from '../../api';
+
+const BUBBLE_ICONS = {
+    bot: Bot,
+    sparkles: Sparkles,
+    zap: Zap,
+    circle: CircleDot,
+};
 
 const FEATURES = [
-    { id: 'chat', icon: MessageSquare, label: 'Chat', color: 'text-blue-400' },
     { id: 'summarize', icon: FileText, label: 'Summarize', color: 'text-purple-400' },
     { id: 'translate', icon: Languages, label: 'Translate', color: 'text-pink-400' },
-    { id: 'notes', icon: StickyNote, label: 'Notes', color: 'text-green-400' },
+    { id: 'quicknotes', icon: StickyNote, label: 'Quick Notes', color: 'text-green-400' },
+    { id: 'voicenotes', icon: Mic, label: 'Voice Notes', color: 'text-blue-400' },
+    { id: 'voicesearch', icon: Search, label: 'Voice Search', color: 'text-cyan-400' },
+    { id: 'tasks', icon: Calendar, label: 'Tasks', color: 'text-orange-400' },
     { id: 'settings', icon: Settings, label: 'Settings', color: 'text-yellow-400' },
 ];
 
 export default function Bubble() {
     const [position, setPosition] = useLocalStorage('nexa.bubble.position', { x: window.innerWidth - 80, y: window.innerHeight - 80 });
     const [isEnabled, setIsEnabled] = useLocalStorage('nexa.bubble.enabled', true);
+    const [bubbleIconType, setBubbleIconType] = useLocalStorage('nexa.bubble.icon', 'bot');
     const [showMenu, setShowMenu] = useState(false);
     const [activeFeature, setActiveFeature] = useState(null);
+    const [taskReminder, setTaskReminder] = useState(null);
+    
+    const BubbleIcon = BUBBLE_ICONS[bubbleIconType] || Bot;
     const constraintsRef = useRef(null);
     const bubbleRef = useRef(null);
     const menuRef = useRef(null);
@@ -39,6 +53,52 @@ export default function Bubble() {
         setActiveFeature(null);
     };
 
+    // Handle task reminder notifications
+    useEffect(() => {
+        const handleTaskReminder = (e) => {
+            if (e.detail?.task) {
+                setTaskReminder(e.detail.task);
+                // Auto-hide after 10 seconds
+                setTimeout(() => setTaskReminder(null), 10000);
+            }
+        };
+
+        window.addEventListener('nexa-task-reminder', handleTaskReminder);
+        
+        // Also check tasks periodically
+        const checkTasks = async () => {
+            try {
+                const res = await api.get('/tasks');
+                const tasks = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+                if (tasks.length > 0) {
+                    const now = new Date();
+                    tasks.forEach(task => {
+                        if (task && task.dueDate && !task.completed) {
+                            const dueDate = new Date(task.dueDate);
+                            const hoursUntilDue = (dueDate - now) / (1000 * 60 * 60);
+                            if (hoursUntilDue <= 24 && hoursUntilDue > 0) {
+                                window.dispatchEvent(new CustomEvent('nexa-task-reminder', {
+                                    detail: { task }
+                                }));
+                            }
+                        }
+                    });
+                }
+            } catch (err) {
+                // Silently fail - tasks endpoint might not be available
+            }
+        };
+        
+        // Check immediately and then every minute
+        checkTasks();
+        const interval = setInterval(checkTasks, 60000);
+        
+        return () => {
+            window.removeEventListener('nexa-task-reminder', handleTaskReminder);
+            clearInterval(interval);
+        };
+    }, []);
+
     // Handle text selection for auto-expand and prefill
     useEffect(() => {
         if (!isEnabled) return;
@@ -50,12 +110,11 @@ export default function Bubble() {
 
             const selection = window.getSelection().toString().trim();
             if (selection.length > 8) {
-                // Auto-open summarize feature if not already open
-                if (!activeFeature) {
-                    setActiveFeature('summarize');
+                // Only trigger if summarize feature is already active
+                if (activeFeature === 'summarize') {
+                    // Trigger event for SummarizeTab to pick up
+                    window.dispatchEvent(new CustomEvent('nexa-text-selected', { detail: { text: selection } }));
                 }
-                // Trigger event for SummarizeTab to pick up
-                window.dispatchEvent(new CustomEvent('nexa-text-selected', { detail: { text: selection } }));
             }
         };
 
@@ -112,7 +171,7 @@ export default function Bubble() {
                 }}
             >
                 <div className="w-full h-full flex items-center justify-center">
-                    <Bot className="w-8 h-8 text-neon-blue" />
+                    <BubbleIcon className="w-8 h-8 text-neon-blue" />
                 </div>
             </motion.div>
         );
@@ -124,65 +183,42 @@ export default function Bubble() {
     const bubbleCenterY = position.y + bubbleSize / 2;
     
     // Detect screen position
-    const isOnRightSide = bubbleCenterX > window.innerWidth / 2;
-    const isOnLeftSide = !isOnRightSide;
-    const isOnTopSide = bubbleCenterY < window.innerHeight / 2;
-    const isOnBottomSide = !isOnTopSide;
+    const screenCenterX = window.innerWidth / 2;
+    const screenCenterY = window.innerHeight / 2;
+    const centerThreshold = 200; // Distance from center to still be considered "center"
     
-    // Detect corners
-    const cornerThreshold = 150; // Distance from edge to consider a corner
-    const isNearTopCorner = isOnTopSide && (bubbleCenterY < cornerThreshold);
-    const isNearBottomCorner = isOnBottomSide && (bubbleCenterY > window.innerHeight - cornerThreshold);
-    const isNearRightCorner = isOnRightSide && (bubbleCenterX > window.innerWidth - cornerThreshold);
-    const isNearLeftCorner = isOnLeftSide && (bubbleCenterX < cornerThreshold);
+    const distanceFromCenterX = Math.abs(bubbleCenterX - screenCenterX);
+    const isInCenter = distanceFromCenterX < centerThreshold;
+    const isOnRightSide = bubbleCenterX > screenCenterX + centerThreshold;
+    const isOnLeftSide = bubbleCenterX < screenCenterX - centerThreshold;
     
-    // Adjust radius based on side (more spacing on right to prevent overlap)
+    // Set radius based on position
     const radius = isOnRightSide ? 105 : 90;
     
-    // Calculate menu direction with corner handling
+    // Calculate menu direction based on bubble position
     let menuStartAngle, menuEndAngle, menuSpan;
     
-    if (isOnRightSide) {
-        // Right side - open to left
-        if (isNearTopCorner) {
-            // Top-right corner: open downward-left (135° to 225°, but tighter span)
-            menuStartAngle = (3 * Math.PI) / 4; // 135°
-            menuEndAngle = (5 * Math.PI) / 4; // 225°
-            menuSpan = Math.PI * 0.7; // Reduced span for tighter spacing (126° instead of 180°)
-        } else if (isNearBottomCorner) {
-            // Bottom-right corner: open upward-left (135° to 225°, but tighter span)
-            menuStartAngle = (3 * Math.PI) / 4; // 135°
-            menuEndAngle = (5 * Math.PI) / 4; // 225°
-            menuSpan = Math.PI * 0.7; // Reduced span for tighter spacing
-        } else {
-            // Middle-right: open to left with tighter spacing
-            menuStartAngle = (3 * Math.PI) / 4; // 135°
-            menuEndAngle = (5 * Math.PI) / 4; // 225°
-            menuSpan = Math.PI * 0.7; // Reduced span for tighter spacing between icons
-        }
+    if (isInCenter) {
+        // Center: display semicircle in top half (spread around)
+        menuStartAngle = -Math.PI / 2; // -90° (up)
+        menuEndAngle = Math.PI / 2; // 90° (down)
+        menuSpan = Math.PI; // 180 degrees (full semicircle)
+    } else if (isOnRightSide) {
+        // Right side: display options on left side of bubble (semicircle opening left)
+        menuStartAngle = (3 * Math.PI) / 4; // 135° (top-left)
+        menuEndAngle = (5 * Math.PI) / 4; // 225° (bottom-left)
+        menuSpan = Math.PI * 0.75; // 135 degrees for tighter spacing
     } else {
-        // Left side - open to right
-        if (isNearTopCorner) {
-            // Top-left corner: open downward-right (-45° to 45°, but tighter span)
-            menuStartAngle = -Math.PI / 4; // -45°
-            menuEndAngle = Math.PI / 4; // 45°
-            menuSpan = Math.PI * 0.7; // Reduced span
-        } else if (isNearBottomCorner) {
-            // Bottom-left corner: open upward-right (-45° to 45°, but tighter span)
-            menuStartAngle = -Math.PI / 4; // -45°
-            menuEndAngle = Math.PI / 4; // 45°
-            menuSpan = Math.PI * 0.7; // Reduced span
-        } else {
-            // Middle-left: open to right
-            menuStartAngle = -Math.PI / 4; // -45°
-            menuEndAngle = Math.PI / 4; // 45°
-            menuSpan = Math.PI; // Full span for left side
-        }
+        // Left side: display options on right side of bubble (semicircle opening right)
+        menuStartAngle = -Math.PI / 4; // -45° (top-right)
+        menuEndAngle = Math.PI / 4; // 45° (bottom-right)
+        menuSpan = Math.PI * 0.75; // 135 degrees for tighter spacing
     }
 
     return (
         <>
             <div ref={constraintsRef} className="fixed inset-0 pointer-events-none z-40" />
+
 
             {/* Semi-circle Menu */}
             <AnimatePresence>
@@ -211,6 +247,26 @@ export default function Bubble() {
                             // Keep icons within viewport bounds
                             iconX = Math.max(5, Math.min(iconX, window.innerWidth - iconSize - 5));
                             iconY = Math.max(5, Math.min(iconY, window.innerHeight - iconSize - 5));
+
+                            // Determine tooltip position based on bubble position
+                            // If bubble is on left side → show tooltips on right side of icons (away from bubble)
+                            // If bubble is on right side → show tooltips on left side of icons (away from bubble)
+                            // If bubble is in center → show based on available space
+                            let tooltipOnLeft;
+                            if (isOnLeftSide) {
+                                // Bubble on left: show tooltips on right side of icons
+                                tooltipOnLeft = false;
+                            } else if (isOnRightSide) {
+                                // Bubble on right: show tooltips on left side of icons
+                                tooltipOnLeft = true;
+                            } else {
+                                // Bubble in center: choose based on space
+                                const iconCenterX = iconX + iconSize / 2;
+                                const spaceOnRight = window.innerWidth - iconCenterX;
+                                const spaceOnLeft = iconCenterX;
+                                tooltipOnLeft = spaceOnLeft < spaceOnRight;
+                            }
+                            const tooltipOnRight = !tooltipOnLeft;
 
                             return (
                                 <motion.div
@@ -243,10 +299,17 @@ export default function Bubble() {
                                     >
                                         <Icon className={clsx("w-6 h-6", feature.color)} />
                                     </button>
-                                    {/* Tooltip on hover */}
-                                    <div className="absolute left-1/2 -translate-x-1/2 top-full mt-2 px-3 py-1 bg-black/90 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+                                    {/* Tooltip on hover - positioned sideways */}
+                                    <div className={clsx(
+                                        "absolute top-1/2 -translate-y-1/2 px-3 py-1 bg-black/90 text-white text-xs rounded-lg whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-10",
+                                        tooltipOnLeft ? "right-full mr-2" : "left-full ml-2"
+                                    )}>
                                         {feature.label}
-                                        <div className="absolute left-1/2 -translate-x-1/2 -top-1 w-2 h-2 bg-black/90 rotate-45"></div>
+                                        {/* Arrow pointing to the icon */}
+                                        <div className={clsx(
+                                            "absolute top-1/2 -translate-y-1/2 w-2 h-2 bg-black/90 rotate-45",
+                                            tooltipOnLeft ? "-right-1" : "-left-1"
+                                        )}></div>
                                     </div>
                                 </motion.div>
                             );
@@ -282,11 +345,46 @@ export default function Bubble() {
                     borderRadius: activeFeature ? 16 : 32,
                 }}
                 className={clsx(
-                    "fixed pointer-events-auto z-50 glass-card shadow-neon flex flex-col overflow-hidden transition-colors duration-300",
+                    "fixed pointer-events-auto z-50 glass-card shadow-neon flex flex-col overflow-visible transition-colors duration-300",
                     activeFeature ? "bg-slate-900/95" : "bg-black/40 hover:bg-neon-blue/20 cursor-pointer"
                 )}
                 style={{ x: position.x, y: position.y }}
             >
+                {/* Task Reminder Notification - Attached to Bubble */}
+                <AnimatePresence>
+                    {taskReminder && (
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.8, y: -10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.8, y: -10 }}
+                            className="absolute pointer-events-auto z-[60] whitespace-nowrap"
+                            style={{
+                                top: '-65px',
+                                left: '50%',
+                                transform: 'translateX(-50%)',
+                                minWidth: '180px',
+                                maxWidth: '250px'
+                            }}
+                        >
+                            <div className="bg-orange-500/20 border-2 border-orange-500/50 rounded-lg px-3 py-2 shadow-lg backdrop-blur-sm">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-xs text-white font-semibold truncate">
+                                            {taskReminder.title} - Due today
+                                        </p>
+                                    </div>
+                                    <button
+                                        onClick={() => setTaskReminder(null)}
+                                        className="text-gray-400 hover:text-white flex-shrink-0"
+                                    >
+                                        <X size={12} />
+                                    </button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+
                 {/* Bubble Icon */}
                 {!activeFeature && (
                     <div
@@ -294,7 +392,7 @@ export default function Bubble() {
                         onClick={toggleMenu}
                     >
                         <div className="relative flex items-center justify-center">
-                            <Bot className="w-8 h-8 text-neon-blue" />
+                            <BubbleIcon className="w-8 h-8 text-neon-blue" />
                             <span className="absolute inset-0 rounded-full animate-pulse-slow ring-1 ring-neon-blue/50" />
                         </div>
                     </div>
