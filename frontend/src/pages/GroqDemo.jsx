@@ -47,6 +47,11 @@ export default function GroqDemo() {
   };
 
   const clearHistory = () => setHistory([]);
+  
+  const clearChat = () => {
+    setPrompt('');
+    setResponse(null);
+  };
 
   return (
     <div className="min-h-screen bg-black text-white pt-28 pb-12 px-6">
@@ -122,7 +127,16 @@ export default function GroqDemo() {
                     ? t('pages.chat.pasteText') + '...' 
                     : t('pages.chat.enterMessage') + '...'}
                 />
-                <div className="flex justify-end">
+                <div className="flex justify-end gap-3">
+                  <Button 
+                    type="button"
+                    onClick={clearChat}
+                    variant="danger"
+                    icon={Trash2}
+                    disabled={!prompt && !response}
+                  >
+                    {t('common.clear')}
+                  </Button>
                   <Button type="submit" isLoading={loading} icon={Send}>
                     {mode === 'summarize' ? t('pages.chat.summarize') : t('common.send')}
                   </Button>

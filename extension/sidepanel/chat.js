@@ -56,6 +56,7 @@ const headerContent = document.getElementById('header-content');
 // Mode toggle buttons (above input)
 const modeChatBtn = document.getElementById('mode-chat');
 const modeSummarizeBtn = document.getElementById('mode-summarize');
+const clearChatBtn = document.getElementById('clear-chat-btn');
 
 // Listen for messages from background (features) and text selection
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -390,8 +391,8 @@ async function loadHistory() {
     const result = await chrome.storage.local.get(['nexa.chat.history']);
     if (result['nexa.chat.history']) {
         history = result['nexa.chat.history'];
-        renderMessages();
     }
+    renderMessages(); // Always render to show empty state or update clear button state
 }
 
 // Save chat history
@@ -401,6 +402,11 @@ async function saveHistory() {
 
 // Render messages
 function renderMessages() {
+    // Update clear button state
+    if (clearChatBtn) {
+        clearChatBtn.disabled = history.length === 0;
+    }
+    
     if (history.length === 0) {
         messagesEl.innerHTML = `
             <div class="empty-state">
@@ -519,5 +525,39 @@ inputEl.addEventListener('input', () => {
     inputEl.style.height = Math.min(inputEl.scrollHeight, 120) + 'px';
     sendBtn.disabled = !inputEl.value.trim();
 });
+
+// Clear chat function
+async function clearChat() {
+    if (history.length === 0) return;
+    
+    // Confirm with user
+    const confirmed = confirm('Are you sure you want to clear all chat messages?');
+    if (!confirmed) return;
+    
+    // Clear history
+    history = [];
+    
+    // Clear storage
+    await chrome.storage.local.remove(['nexa.chat.history']);
+    
+    // Re-render messages (will show empty state)
+    renderMessages();
+    
+    // Clear input field as well
+    if (inputEl) {
+        inputEl.value = '';
+        inputEl.style.height = 'auto';
+    }
+    
+    // Disable send button
+    if (sendBtn) {
+        sendBtn.disabled = true;
+    }
+}
+
+// Clear chat button
+if (clearChatBtn) {
+    clearChatBtn.addEventListener('click', clearChat);
+}
 
 

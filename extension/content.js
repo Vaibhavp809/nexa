@@ -229,6 +229,17 @@
         // Open settings in side panel
         safeSendMessage({ type: 'open_side_panel', page: 'settings' });
       } else if (f.id === 'feat-translate') {
+        // For translate, enable text selection mode
+        enableTextSelectionMode();
+        
+        // Send message to background to notify side panel
+        safeSendMessage({ 
+          toSidePanel: true,
+          feature: f.id,
+          label: f.label,
+          mode: 'translate'
+        });
+        
         // Open translate page in side panel
         safeSendMessage({ type: 'open_side_panel', page: 'translate' });
       } else if (f.id === 'feat-notes') {
@@ -442,16 +453,21 @@
   // Text selection mode for summarizer
   let textSelectionMode = false;
   let selectionHandler = null;
+  let activeTextSelectionFeature = 'summarize'; // Track which feature is using text selection
   
-  function enableTextSelectionMode() {
+  function enableTextSelectionMode(feature = 'summarize') {
     if (textSelectionMode) return; // Already enabled
     
     textSelectionMode = true;
+    activeTextSelectionFeature = feature;
     
     // Show visual indicator
     const indicator = document.createElement('div');
     indicator.id = 'nexa-selection-indicator';
-    indicator.textContent = '📝 Select text to summarize';
+    const indicatorText = feature === 'translate' 
+      ? '🌐 Select text to translate' 
+      : '📝 Select text to summarize';
+    indicator.textContent = indicatorText;
     indicator.style.cssText = `
       position: fixed;
       top: 20px;
@@ -494,16 +510,19 @@
         const selectedText = selection.toString().trim();
         
         if (selectedText && selectedText.length > 0) {
-          // Send selected text to service worker
+          // Send selected text to service worker with active feature
           safeSendMessage({
             type: 'text_selected',
             text: selectedText,
-            feature: 'summarize'
+            feature: activeTextSelectionFeature
           });
           
           // Show feedback that text was captured
           const feedback = document.createElement('div');
-          feedback.textContent = '✓ Text captured! Opening side panel...';
+          const feedbackText = activeTextSelectionFeature === 'translate'
+            ? '✓ Text captured! Opening translate panel...'
+            : '✓ Text captured! Opening side panel...';
+          feedback.textContent = feedbackText;
           feedback.style.cssText = `
             position: fixed;
             top: 20px;

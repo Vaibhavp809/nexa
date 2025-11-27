@@ -116,6 +116,33 @@
             font-size: 16px;
         }
         
+        .clear-btn {
+            padding: 8px 12px;
+            background: rgba(239, 68, 68, 0.2);
+            border: 1px solid rgba(239, 68, 68, 0.5);
+            border-radius: 6px;
+            color: #ef4444;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+        
+        .clear-btn:hover {
+            background: rgba(239, 68, 68, 0.3);
+            color: #ff6b6b;
+        }
+        
+        .clear-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
         .input-group {
             display: flex;
             gap: 8px;
@@ -375,6 +402,9 @@
                 </button>
                 <button class="mode-toggle-btn" id="mode-summarize" data-mode="summarize">
                     <span>📝</span> Summarize
+                </button>
+                <button class="clear-btn" id="clear-chat-btn" title="Clear chat">
+                    <span>🗑️</span> Clear
                 </button>
             </div>
             <div class="input-group">

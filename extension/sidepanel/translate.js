@@ -10,8 +10,12 @@ const LANGUAGES = [
 ];
 
 let currentMode = 'text';
+let voiceModeType = 'basic'; // 'basic' or 'conversation'
 let sourceLang = 'en';
 let targetLang = 'hi';
+let person1Lang = 'en';
+let person2Lang = 'hi';
+let currentSpeaker = null; // 'person1' or 'person2'
 let recognition = null;
 let isListening = false;
 let micPermission = null; // null, 'granted', 'denied', 'prompt'
@@ -35,6 +39,25 @@ const copyBtn = document.getElementById('copy-btn');
 const textMode = document.getElementById('text-mode');
 const voiceMode = document.getElementById('voice-mode');
 const saveTranslateLangBtn = document.getElementById('save-translate-lang-btn');
+const voiceModeBasicBtn = document.getElementById('voice-mode-basic');
+const voiceModeConversationBtn = document.getElementById('voice-mode-conversation');
+const basicVoiceMode = document.getElementById('basic-voice-mode');
+const conversationMode = document.getElementById('conversation-mode');
+const person1Btn = document.getElementById('person1-btn');
+const person2Btn = document.getElementById('person2-btn');
+const person1LangSelect = document.getElementById('person1-lang');
+const person2LangSelect = document.getElementById('person2-lang');
+const person1Icon = document.getElementById('person1-icon');
+const person1Text = document.getElementById('person1-text');
+const person2Icon = document.getElementById('person2-icon');
+const person2Text = document.getElementById('person2-text');
+const conversationTranscripts = document.getElementById('conversation-transcripts');
+const person1Transcript = document.getElementById('person1-transcript');
+const person1TranscriptText = document.getElementById('person1-transcript-text');
+const person1TranslationText = document.getElementById('person1-translation-text');
+const person2Transcript = document.getElementById('person2-transcript');
+const person2TranscriptText = document.getElementById('person2-transcript-text');
+const person2TranslationText = document.getElementById('person2-translation-text');
 
 // Check microphone permission
 async function checkMicrophonePermission() {
@@ -300,8 +323,11 @@ targetLangSelect.addEventListener('change', (e) => {
     saveTranslateLangBtn.style.opacity = '1';
 });
 
-// Voice button
+// Voice button (Basic mode only)
 voiceBtn.addEventListener('click', async () => {
+    // Only work in basic mode
+    if (voiceModeType !== 'basic') return;
+    
     // Check permission first
     if (micPermission !== 'granted') {
         const granted = await requestMicrophonePermission();
@@ -332,6 +358,47 @@ voiceBtn.addEventListener('click', async () => {
                 }
             }
 
+            // Set up recognition handlers for basic mode
+            const langMap = {
+                'en': 'en-US',
+                'hi': 'hi-IN',
+                'mr': 'mr-IN',
+                'kn': 'kn-IN'
+            };
+            recognition.lang = langMap[sourceLang] || sourceLang;
+            
+            recognition.onresult = async (event) => {
+                const spokenText = event.results[0][0].transcript;
+                transcriptText.textContent = spokenText;
+                transcriptContainer.style.display = 'block';
+                isListening = false;
+                updateVoiceButton();
+                
+                // Auto-translate
+                await handleTranslate(spokenText);
+            };
+            
+            recognition.onerror = async (event) => {
+                console.error('Speech recognition error:', event.error);
+                isListening = false;
+                updateVoiceButton();
+                
+                if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                    micPermission = 'denied';
+                    updateVoiceButtonState();
+                    alert('Microphone permission denied. Please enable it in your browser settings or click the microphone icon in the address bar.');
+                } else if (event.error === 'no-speech') {
+                    console.log('No speech detected');
+                } else if (event.error === 'audio-capture') {
+                    alert('No microphone found. Please connect a microphone and try again.');
+                }
+            };
+            
+            recognition.onend = () => {
+                isListening = false;
+                updateVoiceButton();
+            };
+
             isListening = true;
             updateVoiceButton();
             transcriptContainer.style.display = 'none';
@@ -358,6 +425,387 @@ voiceBtn.addEventListener('click', async () => {
         }
     }
 });
+
+// Voice mode type switching (Basic vs Conversation)
+voiceModeBasicBtn.addEventListener('click', () => {
+    voiceModeType = 'basic';
+    voiceModeBasicBtn.classList.add('active');
+    voiceModeConversationBtn.classList.remove('active');
+    basicVoiceMode.style.display = 'block';
+    conversationMode.style.display = 'none';
+    if (recognition && isListening) {
+        recognition.stop();
+    }
+    currentSpeaker = null;
+    updatePersonButtons();
+});
+
+voiceModeConversationBtn.addEventListener('click', () => {
+    voiceModeType = 'conversation';
+    voiceModeConversationBtn.classList.add('active');
+    voiceModeBasicBtn.classList.remove('active');
+    basicVoiceMode.style.display = 'none';
+    conversationMode.style.display = 'block';
+    if (recognition && isListening) {
+        recognition.stop();
+    }
+    currentSpeaker = null;
+    updatePersonButtons();
+});
+
+// Person language selection
+person1LangSelect.addEventListener('change', async (e) => {
+    person1Lang = e.target.value;
+    if (person1Lang === person2Lang) {
+        // Swap if same
+        person2Lang = person1LangSelect.querySelectorAll('option')[0].value === person1Lang ? 
+                     person1LangSelect.querySelectorAll('option')[1].value : 
+                     person1LangSelect.querySelectorAll('option')[0].value;
+        person2LangSelect.value = person2Lang;
+    }
+    if (recognition && currentSpeaker === 'person1') {
+        const langMap = {
+            'en': 'en-US',
+            'hi': 'hi-IN',
+            'mr': 'mr-IN',
+            'kn': 'kn-IN'
+        };
+        recognition.lang = langMap[person1Lang] || person1Lang;
+    }
+    // Save preferences
+    await chrome.storage.local.set({
+        'nexa.conversation.person1Lang': person1Lang,
+        'nexa.conversation.person2Lang': person2Lang
+    });
+});
+
+person2LangSelect.addEventListener('change', async (e) => {
+    person2Lang = e.target.value;
+    if (person2Lang === person1Lang) {
+        // Swap if same
+        person1Lang = person2LangSelect.querySelectorAll('option')[0].value === person2Lang ? 
+                     person2LangSelect.querySelectorAll('option')[1].value : 
+                     person2LangSelect.querySelectorAll('option')[0].value;
+        person1LangSelect.value = person1Lang;
+    }
+    if (recognition && currentSpeaker === 'person2') {
+        const langMap = {
+            'en': 'en-US',
+            'hi': 'hi-IN',
+            'mr': 'mr-IN',
+            'kn': 'kn-IN'
+        };
+        recognition.lang = langMap[person2Lang] || person2Lang;
+    }
+    // Save preferences
+    await chrome.storage.local.set({
+        'nexa.conversation.person1Lang': person1Lang,
+        'nexa.conversation.person2Lang': person2Lang
+    });
+});
+
+// Update person buttons state
+function updatePersonButtons() {
+    if (!isListening) {
+        person1Icon.textContent = '👤';
+        person1Text.textContent = 'Person 1 Speak';
+        person2Icon.textContent = '👤';
+        person2Text.textContent = 'Person 2 Speak';
+        person1Btn.classList.remove('listening');
+        person2Btn.classList.remove('listening');
+    } else {
+        if (currentSpeaker === 'person1') {
+            person1Icon.textContent = '🔴';
+            person1Text.textContent = 'Listening...';
+            person1Btn.classList.add('listening');
+            person2Btn.classList.remove('listening');
+            person2Icon.textContent = '👤';
+            person2Text.textContent = 'Person 2 Speak';
+        } else if (currentSpeaker === 'person2') {
+            person2Icon.textContent = '🔴';
+            person2Text.textContent = 'Listening...';
+            person2Btn.classList.add('listening');
+            person1Btn.classList.remove('listening');
+            person1Icon.textContent = '👤';
+            person1Text.textContent = 'Person 1 Speak';
+        }
+    }
+}
+
+// Person 1 button
+person1Btn.addEventListener('click', async () => {
+    if (voiceModeType !== 'conversation') return;
+    
+    // Check permission first
+    if (micPermission !== 'granted') {
+        const granted = await requestMicrophonePermission();
+        if (!granted) {
+            return;
+        }
+    }
+
+    if (!recognition) {
+        recognition = initSpeechRecognition();
+        if (!recognition) {
+            alert('Speech recognition not supported in this browser.');
+            return;
+        }
+    }
+
+    if (isListening && currentSpeaker === 'person1') {
+        recognition.stop();
+        isListening = false;
+        currentSpeaker = null;
+        updatePersonButtons();
+    } else if (!isListening) {
+        try {
+            currentSpeaker = 'person1';
+            isListening = true;
+            const langMap = {
+                'en': 'en-US',
+                'hi': 'hi-IN',
+                'mr': 'mr-IN',
+                'kn': 'kn-IN'
+            };
+            recognition.lang = langMap[person1Lang] || person1Lang;
+            
+            // Set up result handler for conversation mode
+            recognition.onresult = async (event) => {
+                const spokenText = event.results[0][0].transcript;
+                isListening = false;
+                updatePersonButtons();
+                await handleConversationTranslate(spokenText, 'person1');
+            };
+            
+            recognition.onerror = async (event) => {
+                console.error('Speech recognition error:', event.error);
+                isListening = false;
+                currentSpeaker = null;
+                updatePersonButtons();
+                
+                if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                    micPermission = 'denied';
+                    updateVoiceButtonState();
+                }
+            };
+            
+            recognition.onend = () => {
+                isListening = false;
+                if (currentSpeaker === 'person1') {
+                    currentSpeaker = null;
+                }
+                updatePersonButtons();
+            };
+            
+            updatePersonButtons();
+            conversationTranscripts.style.display = 'flex';
+            person1Transcript.style.display = 'none';
+            recognition.start();
+        } catch (error) {
+            console.error('Error starting recognition:', error);
+            isListening = false;
+            currentSpeaker = null;
+            updatePersonButtons();
+        }
+    }
+});
+
+// Person 2 button
+person2Btn.addEventListener('click', async () => {
+    if (voiceModeType !== 'conversation') return;
+    
+    // Check permission first
+    if (micPermission !== 'granted') {
+        const granted = await requestMicrophonePermission();
+        if (!granted) {
+            return;
+        }
+    }
+
+    if (!recognition) {
+        recognition = initSpeechRecognition();
+        if (!recognition) {
+            alert('Speech recognition not supported in this browser.');
+            return;
+        }
+    }
+
+    if (isListening && currentSpeaker === 'person2') {
+        recognition.stop();
+        isListening = false;
+        currentSpeaker = null;
+        updatePersonButtons();
+    } else if (!isListening) {
+        try {
+            currentSpeaker = 'person2';
+            isListening = true;
+            const langMap = {
+                'en': 'en-US',
+                'hi': 'hi-IN',
+                'mr': 'mr-IN',
+                'kn': 'kn-IN'
+            };
+            recognition.lang = langMap[person2Lang] || person2Lang;
+            
+            // Set up result handler for conversation mode
+            recognition.onresult = async (event) => {
+                const spokenText = event.results[0][0].transcript;
+                isListening = false;
+                updatePersonButtons();
+                await handleConversationTranslate(spokenText, 'person2');
+            };
+            
+            recognition.onerror = async (event) => {
+                console.error('Speech recognition error:', event.error);
+                isListening = false;
+                currentSpeaker = null;
+                updatePersonButtons();
+                
+                if (event.error === 'not-allowed' || event.error === 'permission-denied') {
+                    micPermission = 'denied';
+                    updateVoiceButtonState();
+                }
+            };
+            
+            recognition.onend = () => {
+                isListening = false;
+                if (currentSpeaker === 'person2') {
+                    currentSpeaker = null;
+                }
+                updatePersonButtons();
+            };
+            
+            updatePersonButtons();
+            conversationTranscripts.style.display = 'flex';
+            person2Transcript.style.display = 'none';
+            recognition.start();
+        } catch (error) {
+            console.error('Error starting recognition:', error);
+            isListening = false;
+            currentSpeaker = null;
+            updatePersonButtons();
+        }
+    }
+});
+
+// Handle conversation translation
+async function handleConversationTranslate(text, speaker) {
+    const sourceLang = speaker === 'person1' ? person1Lang : person2Lang;
+    const targetLang = speaker === 'person1' ? person2Lang : person1Lang;
+    
+    // Show transcript
+    if (speaker === 'person1') {
+        person1TranscriptText.textContent = text;
+        person1TranslationText.textContent = 'Translating...';
+        person1Transcript.style.display = 'block';
+    } else {
+        person2TranscriptText.textContent = text;
+        person2TranslationText.textContent = 'Translating...';
+        person2Transcript.style.display = 'block';
+    }
+    
+    // Check authentication
+    const result = await chrome.storage.local.get(['nexa_token']);
+    if (!result.nexa_token) {
+        if (speaker === 'person1') {
+            person1TranslationText.textContent = 'Please log in to use translation.';
+        } else {
+            person2TranslationText.textContent = 'Please log in to use translation.';
+        }
+        return;
+    }
+    
+    try {
+        const sourceLangData = LANGUAGES.find(l => l.code === sourceLang);
+        const targetLangData = LANGUAGES.find(l => l.code === targetLang);
+        
+        const sourceLangName = sourceLangData?.name || sourceLang;
+        const targetLangName = targetLangData?.name || targetLang;
+        const sourceNativeName = sourceLangData?.nativeName || '';
+        const targetNativeName = targetLangData?.nativeName || '';
+        
+        // Create translation prompt
+        const translationPrompt = `You are a professional translator. Your task is to translate text from ${sourceLangName}${sourceNativeName ? ` (${sourceNativeName})` : ''} to ${targetLangName}${targetNativeName ? ` (${targetNativeName})` : ''}.
+
+CRITICAL INSTRUCTIONS:
+- INPUT LANGUAGE: ${sourceLangName}${sourceNativeName ? ` (${sourceNativeName})` : ''}
+- OUTPUT LANGUAGE: ${targetLangName}${targetNativeName ? ` (${targetNativeName})` : ''}
+- You MUST translate FROM ${sourceLangName} TO ${targetLangName}
+- Do NOT return the text in ${sourceLangName}, only return it in ${targetLangName}
+- Only output the translated text - nothing else
+- Do not include "Translation:", explanations, or any labels
+- Do not include the original text
+- Do not use quotation marks
+
+Source text (${sourceLangName}): "${text}"
+
+Translated text (${targetLangName}):`;
+        
+        // Call API via service worker
+        const response = await chrome.runtime.sendMessage({
+            type: 'fetch_groq',
+            prompt: translationPrompt
+        });
+        
+        if (response.ok && response.data) {
+            let translatedText = '';
+            if (response.data.data) {
+                translatedText = typeof response.data.data === 'string' ? response.data.data : JSON.stringify(response.data.data);
+            } else if (response.data.message) {
+                translatedText = typeof response.data.message === 'string' ? response.data.message : JSON.stringify(response.data.message);
+            } else if (typeof response.data === 'string') {
+                translatedText = response.data;
+            }
+            
+            // Clean translation
+            translatedText = translatedText.trim();
+            translatedText = translatedText.replace(/^(Translation:|Translated text:|In .*?:|Here is the translation:|Translation in .*?:|The translation is:|Result:)/i, '').trim();
+            
+            if (translatedText.includes('"')) {
+                const quotedMatch = translatedText.match(/"([^"]+)"/);
+                if (quotedMatch) {
+                    translatedText = quotedMatch[1];
+                } else {
+                    translatedText = translatedText.replace(/^["']|["']$/g, '');
+                }
+            }
+            
+            translatedText = translatedText.replace(new RegExp(`(${sourceLangName}:|${targetLangName}:)`, 'gi'), '').trim();
+            translatedText = translatedText.replace(/^[\n\r]+|[\n\r]+$/g, '').trim();
+            
+            if (!translatedText || translatedText === text) {
+                translatedText = 'Translation failed. Please try again.';
+            }
+            
+            // Display translation
+            if (speaker === 'person1') {
+                person1TranslationText.textContent = translatedText;
+            } else {
+                person2TranslationText.textContent = translatedText;
+            }
+            
+            // Auto-speak translation
+            if (translatedText && 'speechSynthesis' in window) {
+                speakTranslation(translatedText, targetLang);
+            }
+        } else {
+            const errorMsg = response.error || 'Translation failed. Please try again.';
+            if (speaker === 'person1') {
+                person1TranslationText.textContent = errorMsg;
+            } else {
+                person2TranslationText.textContent = errorMsg;
+            }
+        }
+    } catch (error) {
+        console.error('Translation error:', error);
+        const errorMsg = 'Translation error. Please try again.';
+        if (speaker === 'person1') {
+            person1TranslationText.textContent = errorMsg;
+        } else {
+            person2TranslationText.textContent = errorMsg;
+        }
+    }
+}
 
 // Translate function
 async function handleTranslate(textToTranslate = null) {
@@ -441,8 +889,8 @@ Translated text (${targetLangName}):`;
             translationOutput.textContent = translatedText;
             actionButtons.style.display = 'flex';
 
-            // Auto-speak in voice mode
-            if (currentMode === 'voice' && translatedText && 'speechSynthesis' in window) {
+            // Auto-speak in voice mode (basic mode only)
+            if (currentMode === 'voice' && voiceModeType === 'basic' && translatedText && 'speechSynthesis' in window) {
                 speakTranslation(translatedText);
             }
         } else if (response.needsAuth) {
@@ -457,9 +905,10 @@ Translated text (${targetLangName}):`;
 }
 
 // Speak translation
-function speakTranslation(text) {
+function speakTranslation(text, lang = null) {
     if (!('speechSynthesis' in window)) return;
 
+    const targetLanguage = lang || targetLang;
     speechSynthesis.cancel();
     
     setTimeout(() => {
@@ -470,9 +919,9 @@ function speakTranslation(text) {
             'mr': 'mr-IN',
             'kn': 'kn-IN'
         };
-        utterance.lang = langMap[targetLang] || targetLang;
+        utterance.lang = langMap[targetLanguage] || targetLanguage;
         
-        const voice = findBestVoiceForLanguage(targetLang);
+        const voice = findBestVoiceForLanguage(targetLanguage);
         if (voice) {
             utterance.voice = voice;
         }
@@ -694,6 +1143,17 @@ window.addEventListener('load', async () => {
     if (currentMode === 'voice') {
         recognition = initSpeechRecognition();
         updateVoiceButtonState();
+        
+        // Load conversation mode preferences
+        const result = await chrome.storage.local.get(['nexa.conversation.person1Lang', 'nexa.conversation.person2Lang']);
+        if (result['nexa.conversation.person1Lang']) {
+            person1Lang = result['nexa.conversation.person1Lang'];
+            person1LangSelect.value = person1Lang;
+        }
+        if (result['nexa.conversation.person2Lang']) {
+            person2Lang = result['nexa.conversation.person2Lang'];
+            person2LangSelect.value = person2Lang;
+        }
     }
 });
 

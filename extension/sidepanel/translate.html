@@ -350,14 +350,79 @@
         
         <!-- Voice Mode Input -->
         <div id="voice-mode" class="input-area" style="display: none;">
-            <button class="voice-btn" id="voice-btn">
-                <span id="voice-icon">🎤</span>
-                <span id="voice-text">Start Listening</span>
-            </button>
-            <div id="transcript-container" style="display: none;">
-                <div class="transcript">
-                    <div class="transcript-label">You said:</div>
-                    <div class="transcript-text" id="transcript-text"></div>
+            <!-- Voice Mode Toggle -->
+            <div class="mode-toggle" style="margin-bottom: 16px;">
+                <button class="mode-btn active" id="voice-mode-basic" data-voice-mode="basic">
+                    🎤 Basic
+                </button>
+                <button class="mode-btn" id="voice-mode-conversation" data-voice-mode="conversation">
+                    💬 Conversation
+                </button>
+            </div>
+            
+            <!-- Basic Voice Mode -->
+            <div id="basic-voice-mode">
+                <button class="voice-btn" id="voice-btn">
+                    <span id="voice-icon">🎤</span>
+                    <span id="voice-text">Start Listening</span>
+                </button>
+                <div id="transcript-container" style="display: none;">
+                    <div class="transcript">
+                        <div class="transcript-label">You said:</div>
+                        <div class="transcript-text" id="transcript-text"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conversation Mode -->
+            <div id="conversation-mode" style="display: none;">
+                <div class="lang-selector" style="margin-bottom: 16px;">
+                    <div class="lang-group">
+                        <label class="lang-label">Person 1 Language</label>
+                        <select id="person1-lang">
+                            <option value="en">English</option>
+                            <option value="hi">Hindi (हिंदी)</option>
+                            <option value="mr">Marathi (मराठी)</option>
+                            <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                        </select>
+                    </div>
+                    <div style="padding-top: 24px; font-size: 20px;">↔</div>
+                    <div class="lang-group">
+                        <label class="lang-label">Person 2 Language</label>
+                        <select id="person2-lang">
+                            <option value="hi">Hindi (हिंदी)</option>
+                            <option value="en">English</option>
+                            <option value="mr">Marathi (मराठी)</option>
+                            <option value="kn">Kannada (ಕನ್ನಡ)</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 8px; margin-bottom: 16px;">
+                    <button class="voice-btn" id="person1-btn" style="flex: 1;">
+                        <span id="person1-icon">👤</span>
+                        <span id="person1-text">Person 1 Speak</span>
+                    </button>
+                    <button class="voice-btn" id="person2-btn" style="flex: 1;">
+                        <span id="person2-icon">👤</span>
+                        <span id="person2-text">Person 2 Speak</span>
+                    </button>
+                </div>
+                
+                <!-- Conversation Transcripts -->
+                <div id="conversation-transcripts" style="display: none; gap: 12px; flex-direction: column;">
+                    <div class="transcript" id="person1-transcript" style="display: none;">
+                        <div class="transcript-label">Person 1 said:</div>
+                        <div class="transcript-text" id="person1-transcript-text"></div>
+                        <div class="transcript-label" style="margin-top: 8px; color: #00b3ff;">Translated:</div>
+                        <div class="transcript-text" style="color: #00b3ff;" id="person1-translation-text"></div>
+                    </div>
+                    <div class="transcript" id="person2-transcript" style="display: none;">
+                        <div class="transcript-label">Person 2 said:</div>
+                        <div class="transcript-text" id="person2-transcript-text"></div>
+                        <div class="transcript-label" style="margin-top: 8px; color: #00b3ff;">Translated:</div>
+                        <div class="transcript-text" style="color: #00b3ff;" id="person2-translation-text"></div>
+                    </div>
                 </div>
             </div>
         </div>
