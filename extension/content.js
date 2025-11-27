@@ -230,7 +230,7 @@
         safeSendMessage({ type: 'open_side_panel', page: 'settings' });
       } else if (f.id === 'feat-translate') {
         // For translate, enable text selection mode
-        enableTextSelectionMode();
+        enableTextSelectionMode('translate');
         
         // Send message to background to notify side panel
         safeSendMessage({ 
@@ -256,7 +256,7 @@
         safeSendMessage({ type: 'open_side_panel', page: 'voicesearch' });
       } else if (f.id === 'feat-summarize') {
         // For summarizer, enable text selection mode
-        enableTextSelectionMode();
+        enableTextSelectionMode('summarize');
         
         // Send message to background to notify side panel
         safeSendMessage({ 

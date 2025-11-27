@@ -170,12 +170,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             return true;
         }
         
+        // Determine which side panel to open based on feature
+        const featureKey = feature === 'translate' ? 'feat-translate' : 'feat-summarize';
+        const panelPage = feature === 'translate' ? 'translate' : 'chat';
+        
         // Forward selected text to side panel via storage and message
         chrome.storage.local.set({
             nexa_selected_text: selectedText,
-            nexa_selected_feature: 'feat-summarize'
+            nexa_selected_feature: featureKey
         }, () => {
-            // Try to open chat side panel first if it's not already open
+            // Try to open the appropriate side panel
             chrome.sidePanel.open({ windowId: sender.tab?.windowId });
             
             // Broadcast to side panel via tabs

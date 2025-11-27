@@ -195,11 +195,14 @@ function initSpeechRecognition() {
     return recognition;
 }
 
-// Find best voice for language
+// Find best voice for language (with comprehensive Indian language fallbacks)
 function findBestVoiceForLanguage(langCode) {
     const voices = speechSynthesis.getVoices();
-    if (!voices || voices.length === 0) return null;
-
+    if (!voices || voices.length === 0) {
+        console.warn('No voices available in speech synthesis');
+        return null;
+    }
+    
     const langCodes = {
         'en': 'en-US',
         'hi': 'hi-IN',
@@ -207,23 +210,109 @@ function findBestVoiceForLanguage(langCode) {
         'kn': 'kn-IN'
     };
     const targetLang = langCodes[langCode] || langCode;
-
-    // Try exact match first
-    let voice = voices.find(v => v.lang === targetLang);
-    if (voice) return voice;
-
-    // Try partial match
-    voice = voices.find(v => v.lang.toLowerCase().includes(targetLang.toLowerCase()));
-    if (voice) return voice;
-
-    // For Indian languages, try Indian English as fallback
-    if (langCode !== 'en') {
-        voice = voices.find(v => v.lang === 'en-IN');
-        if (voice) return voice;
+    
+    let matchingVoice = null;
+    
+    if (langCode === 'kn') {
+        // Kannada: prioritize exact matches
+        matchingVoice = voices.find(voice => voice.lang === 'kn-IN') ||
+                       voices.find(voice => voice.lang === 'kn') ||
+                       voices.find(voice => voice.lang.toLowerCase().includes('kn-in')) ||
+                       voices.find(voice => voice.lang.toLowerCase().startsWith('kn-')) ||
+                       voices.find(voice => voice.name.toLowerCase().includes('kannada')) ||
+                       voices.find(voice => voice.name.toLowerCase().includes('kn'));
+        
+        // Fallback: Use Hindi voice (better than English for Indian scripts)
+        if (!matchingVoice) {
+            matchingVoice = voices.find(voice => voice.lang === 'hi-IN' || voice.lang === 'hi' || 
+                                                voice.name.toLowerCase().includes('hindi') ||
+                                                voice.name.toLowerCase().includes('हिन्दी'));
+        }
+        
+        // Last resort: Use Indian English (en-IN) which handles Indian scripts better
+        if (!matchingVoice) {
+            matchingVoice = voices.find(voice => voice.lang === 'en-IN' || 
+                                                (voice.lang.startsWith('en-') && 
+                                                 (voice.name.toLowerCase().includes('india') || 
+                                                  voice.name.toLowerCase().includes('indian'))));
+        }
+        
+        // Only log if no voice found at all (not for fallbacks)
+        if (!matchingVoice) {
+            console.warn('No Kannada voice found, even with fallbacks');
+        }
+    } else if (langCode === 'mr') {
+        // Marathi: prioritize exact matches
+        matchingVoice = voices.find(voice => voice.lang === 'mr-IN') ||
+                       voices.find(voice => voice.lang === 'mr') ||
+                       voices.find(voice => voice.lang.toLowerCase().includes('mr-in')) ||
+                       voices.find(voice => voice.lang.toLowerCase().startsWith('mr-')) ||
+                       voices.find(voice => voice.name.toLowerCase().includes('marathi')) ||
+                       voices.find(voice => voice.name.toLowerCase().includes('mr'));
+        
+        // Fallback: Use Hindi voice (same script family - Devanagari)
+        if (!matchingVoice) {
+            matchingVoice = voices.find(voice => voice.lang === 'hi-IN' || voice.lang === 'hi' || 
+                                                voice.name.toLowerCase().includes('hindi') ||
+                                                voice.name.toLowerCase().includes('हिन्दी'));
+        }
+        
+        // Last resort: Use Indian English (en-IN) which handles Devanagari script better
+        if (!matchingVoice) {
+            matchingVoice = voices.find(voice => voice.lang === 'en-IN' || 
+                                                (voice.lang.startsWith('en-') && 
+                                                 (voice.name.toLowerCase().includes('india') || 
+                                                  voice.name.toLowerCase().includes('indian'))));
+        }
+        
+        // Only log if no voice found at all (not for fallbacks)
+        if (!matchingVoice) {
+            console.warn('No Marathi voice found, even with fallbacks');
+        }
+    } else if (langCode === 'hi') {
+        // Hindi: prioritize exact matches
+        matchingVoice = voices.find(voice => voice.lang === 'hi-IN') ||
+                       voices.find(voice => voice.lang === 'hi') ||
+                       voices.find(voice => voice.lang.toLowerCase().includes('hi-in')) ||
+                       voices.find(voice => voice.lang.toLowerCase().startsWith('hi-')) ||
+                       voices.find(voice => voice.name.toLowerCase().includes('hindi') ||
+                                           voice.name.toLowerCase().includes('हिन्दी'));
+    } else if (langCode === 'en') {
+        // English: prefer US English, fallback to any English
+        matchingVoice = voices.find(voice => voice.lang === 'en-US') ||
+                       voices.find(voice => voice.lang.startsWith('en-') || voice.lang === 'en');
     }
-
-    // Last resort: default voice
-    return voices.find(v => v.default) || voices[0];
+    
+    // For Indian languages (kn, mr), we accept Hindi or Indian English as fallbacks
+    // But still reject US English voices
+    if (matchingVoice && ['kn', 'mr'].includes(langCode)) {
+        const voiceLang = matchingVoice.lang.toLowerCase();
+        const voiceName = matchingVoice.name.toLowerCase();
+        // Only reject if it's US English (en-US), allow hi-IN or en-IN
+        if ((voiceLang === 'en-us' || voiceLang === 'en') && 
+            !voiceName.includes('india') && 
+            !voiceName.includes('indian') &&
+            !voiceLang.includes('in')) {
+            console.warn(`Rejected US English voice for ${langCode}:`, matchingVoice.name);
+            matchingVoice = null;
+        }
+    }
+    
+    // For Hindi, reject non-Hindi voices
+    if (matchingVoice && langCode === 'hi') {
+        const voiceLang = matchingVoice.lang.toLowerCase();
+        if (!voiceLang.includes('hi') && !matchingVoice.name.toLowerCase().includes('hindi') && 
+            !matchingVoice.name.toLowerCase().includes('हिन्दी')) {
+            matchingVoice = null;
+        }
+    }
+    
+    // Final fallback: default voice if nothing else found
+    if (!matchingVoice) {
+        matchingVoice = voices.find(v => v.default) || voices[0];
+    }
+    
+    return matchingVoice;
 }
 
 // Update voice button state
@@ -911,27 +1000,64 @@ function speakTranslation(text, lang = null) {
     const targetLanguage = lang || targetLang;
     speechSynthesis.cancel();
     
-    setTimeout(() => {
-        const utterance = new SpeechSynthesisUtterance(text);
-        const langMap = {
-            'en': 'en-US',
-            'hi': 'hi-IN',
-            'mr': 'mr-IN',
-            'kn': 'kn-IN'
-        };
-        utterance.lang = langMap[targetLanguage] || targetLanguage;
-        
-        const voice = findBestVoiceForLanguage(targetLanguage);
-        if (voice) {
-            utterance.voice = voice;
+    // Wait for voices to load if not already loaded
+    const doSpeak = () => {
+        const voices = speechSynthesis.getVoices();
+        if (voices.length === 0) {
+            // Voices not loaded yet, wait for them
+            if (speechSynthesis.onvoiceschanged) {
+                const voiceHandler = () => {
+                    speechSynthesis.onvoiceschanged = null;
+                    doSpeak();
+                };
+                speechSynthesis.onvoiceschanged = voiceHandler;
+            } else {
+                // Fallback: try again after delay
+                setTimeout(doSpeak, 300);
+            }
+            return;
         }
         
-        utterance.onerror = (event) => {
-            console.error('Speech synthesis error:', event.error);
-        };
-        
-        speechSynthesis.speak(utterance);
-    }, 100);
+        // Small delay after cancellation to ensure previous speech is stopped
+        setTimeout(() => {
+            const utterance = new SpeechSynthesisUtterance(text);
+            const langMap = {
+                'en': 'en-US',
+                'hi': 'hi-IN',
+                'mr': 'mr-IN',
+                'kn': 'kn-IN'
+            };
+            utterance.lang = langMap[targetLanguage] || targetLanguage;
+            utterance.rate = 1.0;
+            utterance.pitch = 1.0;
+            utterance.volume = 1.0;
+            
+            // Use improved voice selection with fallbacks
+            const voice = findBestVoiceForLanguage(targetLanguage);
+            if (voice) {
+                utterance.voice = voice;
+                console.log(`Speaking in ${targetLanguage}: Using ${voice.name} (${voice.lang})`);
+            } else {
+                console.warn(`No voice found for ${targetLanguage}, using browser default`);
+            }
+            
+            utterance.onstart = () => {
+                console.log('Speech started');
+            };
+            
+            utterance.onend = () => {
+                console.log('Speech ended');
+            };
+            
+            utterance.onerror = (event) => {
+                console.error('Speech synthesis error:', event.error);
+            };
+            
+            speechSynthesis.speak(utterance);
+        }, 100);
+    };
+    
+    doSpeak();
 }
 
 // Translate button
@@ -1129,6 +1255,81 @@ function applyTranslations() {
     });
 }
 
+// Listen for selected text from content script
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (!message || typeof message !== 'object') {
+        return false;
+    }
+    
+    // Handle selected text for translate
+    if (message.type === 'text_selected_for_sidepanel' || 
+        message.type === 'selected_text' || 
+        message.type === 'text_selected') {
+        const text = message.text;
+        const feature = message.feature || 'translate';
+        
+        if (text && (feature === 'translate' || feature === 'feat-translate') && inputText) {
+            // Set the selected text in input box
+            inputText.value = text;
+            // Switch to text mode if not already
+            if (currentMode !== 'text') {
+                currentMode = 'text';
+                modeTextBtn.classList.add('active');
+                modeVoiceBtn.classList.remove('active');
+                textMode.style.display = 'flex';
+                voiceMode.style.display = 'none';
+            }
+            // Focus the input
+            inputText.focus();
+            // Show a subtle notification
+            const notification = document.createElement('div');
+            notification.textContent = 'Text pasted! Click translate to translate.';
+            notification.style.cssText = `
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: rgba(0, 179, 255, 0.9);
+                color: white;
+                padding: 8px 16px;
+                border-radius: 6px;
+                z-index: 10000;
+                font-size: 12px;
+                font-family: Arial, sans-serif;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            `;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+    }
+    
+    return true;
+});
+
+// Check for selected text from storage (fallback)
+async function checkForSelectedText() {
+    try {
+        const result = await chrome.storage.local.get(['nexa_selected_text', 'nexa_selected_feature']);
+        if (result.nexa_selected_text && result.nexa_selected_feature === 'feat-translate') {
+            if (inputText && !inputText.value) {
+                inputText.value = result.nexa_selected_text;
+                // Switch to text mode
+                if (currentMode !== 'text') {
+                    currentMode = 'text';
+                    modeTextBtn.classList.add('active');
+                    modeVoiceBtn.classList.remove('active');
+                    textMode.style.display = 'flex';
+                    voiceMode.style.display = 'none';
+                }
+                inputText.focus();
+                // Clear the stored text after using it
+                await chrome.storage.local.remove(['nexa_selected_text', 'nexa_selected_feature']);
+            }
+        }
+    } catch (error) {
+        console.error('Error checking for selected text:', error);
+    }
+}
+
 // Initialize on load
 window.addEventListener('load', async () => {
     // Initialize translations
@@ -1136,6 +1337,11 @@ window.addEventListener('load', async () => {
     
     // Load saved language preferences
     await loadTranslateLanguagePreferences();
+    
+    // Check for selected text
+    checkForSelectedText();
+    setTimeout(() => checkForSelectedText(), 500);
+    setTimeout(() => checkForSelectedText(), 1000);
     
     // Check microphone permission on page load
     await checkMicrophonePermission();
