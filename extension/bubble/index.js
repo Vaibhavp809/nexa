@@ -562,6 +562,91 @@
                     }
                 }, 100);
                 break;
+            case 'translate':
+                panelContent.innerHTML = `
+                    <div style="padding: 20px; color: white;">
+                        <h3 style="margin-bottom: 15px; color: #ec4899;">Translate</h3>
+                        
+                        <!-- Language Selection -->
+                        <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 12px; color: #9ca3af; margin-bottom: 5px;">From</label>
+                                <select id="bubble-source-lang" style="width: 100%; padding: 8px; background: #111827; border: 1px solid #4b5563; border-radius: 6px; color: white; font-size: 13px;">
+                                    <option value="en" style="background: #111827; color: white;">English</option>
+                                    <option value="hi" style="background: #111827; color: white;">Hindi</option>
+                                    <option value="mr" style="background: #111827; color: white;">Marathi</option>
+                                    <option value="kn" style="background: #111827; color: white;">Kannada</option>
+                                </select>
+                            </div>
+                            <div style="padding-top: 20px; font-size: 16px;">→</div>
+                            <div style="flex: 1;">
+                                <label style="display: block; font-size: 12px; color: #9ca3af; margin-bottom: 5px;">To</label>
+                                <select id="bubble-target-lang" style="width: 100%; padding: 8px; background: #111827; border: 1px solid #4b5563; border-radius: 6px; color: white; font-size: 13px;">
+                                    <option value="hi" style="background: #111827; color: white;">Hindi</option>
+                                    <option value="en" style="background: #111827; color: white;">English</option>
+                                    <option value="mr" style="background: #111827; color: white;">Marathi</option>
+                                    <option value="kn" style="background: #111827; color: white;">Kannada</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <textarea id="bubble-translate-input" placeholder="Enter text to translate..." 
+                                  style="width: 100%; min-height: 80px; padding: 10px; background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; color: white; margin-bottom: 10px; font-size: 14px;"></textarea>
+                        <button id="bubble-translate-btn" style="padding: 10px 20px; background: #ec4899; color: white; border: none; border-radius: 8px; cursor: pointer; width: 100%; margin-bottom: 10px;">Translate</button>
+                        <div id="bubble-translate-output" style="margin-top: 10px; padding: 15px; background: rgba(236, 72, 153, 0.1); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 8px; display: none; min-height: 60px;"></div>
+                        
+                        <div style="margin-top: 10px; text-align: center;">
+                            <button onclick="window.parent.postMessage({type: 'open_side_panel'}, '*')" 
+                                    style="padding: 8px 16px; background: rgba(255,255,255,0.1); color: #9ca3af; border: 1px solid rgba(255,255,255,0.2); border-radius: 6px; cursor: pointer; font-size: 12px;">
+                                Open Full Translate
+                            </button>
+                        </div>
+                    </div>
+                `;
+                // Re-attach event listeners
+                setTimeout(() => {
+                    const btn = document.getElementById('bubble-translate-btn');
+                    const input = document.getElementById('bubble-translate-input');
+                    const output = document.getElementById('bubble-translate-output');
+                    const sourceLang = document.getElementById('bubble-source-lang');
+                    const targetLang = document.getElementById('bubble-target-lang');
+                    
+                    if (btn && input && output && sourceLang && targetLang) {
+                        btn.addEventListener('click', async () => {
+                            const text = input.value.trim();
+                            if (!text) return;
+                            
+                            btn.disabled = true;
+                            btn.textContent = 'Translating...';
+                            output.style.display = 'block';
+                            output.textContent = 'Translating...';
+                            
+                            try {
+                                const langNames = {
+                                    'en': 'English', 'hi': 'Hindi', 'mr': 'Marathi', 'kn': 'Kannada'
+                                };
+                                const prompt = `Translate the following text from ${langNames[sourceLang.value]} to ${langNames[targetLang.value]}. Only return the translated text, no explanations:\n\n${text}`;
+                                const response = await callGroqAPI(prompt);
+                                
+                                if (response && response.ok) {
+                                    let translatedText = '';
+                                    if (response.data) {
+                                        translatedText = response.data.data || response.data.message || JSON.stringify(response.data);
+                                    }
+                                    output.textContent = translatedText || 'No translation generated';
+                                } else {
+                                    output.textContent = response?.error || 'Translation failed. Please try again.';
+                                }
+                            } catch (e) {
+                                output.textContent = 'Error: ' + e.message;
+                            } finally {
+                                btn.disabled = false;
+                                btn.textContent = 'Translate';
+                            }
+                        });
+                    }
+                }, 100);
+                break;
             case 'settings':
                 panelContent.innerHTML = `
                     <div style="padding: 20px; color: white;">

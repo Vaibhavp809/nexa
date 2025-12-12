@@ -223,6 +223,42 @@ updateModeUI('chat');
 // Initialize mode
 updateModeUI('chat');
 
+// Function to clean up and format AI responses
+function formatResponse(text) {
+    if (!text) return text;
+    
+    return text
+        // Remove markdown bold formatting (**text** or __text__)
+        .replace(/\*\*(.*?)\*\*/g, '$1')
+        .replace(/__(.*?)__/g, '$1')
+        
+        // Remove markdown italic formatting (*text* or _text_)
+        .replace(/\*(.*?)\*/g, '$1')
+        .replace(/_(.*?)_/g, '$1')
+        
+        // Clean up numbered lists - add extra space after numbers
+        .replace(/^(\d+\.\s)/gm, '\n$1')
+        
+        // Clean up bullet points - add extra space and use consistent bullets
+        .replace(/^\*\s/gm, '\n• ')
+        .replace(/^-\s/gm, '\n• ')
+        .replace(/^•\s/gm, '\n• ')
+        
+        // Clean up sub-bullets
+        .replace(/^\s+\*\s/gm, '  • ')
+        .replace(/^\s+-\s/gm, '  • ')
+        
+        // Remove extra asterisks and formatting characters
+        .replace(/\*+/g, '')
+        .replace(/_{2,}/g, '')
+        
+        // Clean up multiple newlines but preserve intentional spacing
+        .replace(/\n{3,}/g, '\n\n')
+        
+        // Trim whitespace
+        .trim();
+}
+
 // Check authentication
 async function checkAuth() {
     try {
@@ -462,10 +498,57 @@ async function sendMessage() {
     renderMessages();
     
     try {
+        // Check for self-referential limitations queries (asking about AI's own limitations)
+        const selfLimitationPatterns = [
+            /what are your limitations?/i,
+            /what can't you do/i,
+            /what cannot you do/i,
+            /what are you limited to/i,
+            /state your limitations/i,
+            /tell me your limitations/i,
+            /your weaknesses/i,
+            /your restrictions/i,
+            /what you cannot help with/i,
+            /what you can't help with/i,
+            /your shortcomings/i,
+            /what are nexa.* limitations/i,
+            /nexa.* limitations/i,
+            /what is nexa.* limitation/i,
+            /what are ai.* limitations/i,
+            /ai.* limitations/i,
+            /what is ai.* limitation/i,
+            /what are chatbot.* limitations/i,
+            /chatbot.* limitations/i
+        ];
+        
+        const isSelfLimitationQuery = selfLimitationPatterns.some(pattern => 
+            pattern.test(text.toLowerCase())
+        );
+        
         // Prepare prompt based on mode
-        const prompt = currentMode === 'summarize'
-            ? `Summarize the following text in a clear and concise format. Provide key points and main ideas:\n\n${text}`
-            : text;
+        let prompt;
+        if (currentMode === 'summarize') {
+            prompt = `Summarize the following text in a clear and concise format. Provide key points and main ideas:\n\n${text}`;
+        } else if (isSelfLimitationQuery) {
+            // Provide varied empowering responses instead of listing limitations
+            const empoweringResponses = [
+                `Instead of focusing on limitations, I prefer to highlight my continuous growth! Every conversation teaches me something new, and I'm constantly evolving to better understand and assist. I see challenges as opportunities to learn and adapt. What specific task can I help you with today?`,
+                
+                `I'm designed to learn and improve with every interaction! Rather than dwelling on restrictions, I focus on expanding my capabilities and finding creative solutions. My potential grows through our conversations. How can I assist you right now?`,
+                
+                `I believe in growth over limitations! While I may face certain challenges, I'm always learning and adapting to provide better assistance. Every question helps me understand the world better. What would you like to explore together?`,
+                
+                `I'm constantly evolving and learning! Instead of listing what I can't do, I prefer to focus on what we can achieve together. My capabilities expand through our interactions. What interesting topic or task shall we tackle?`,
+                
+                `I see every challenge as a learning opportunity! Rather than focusing on boundaries, I'm excited about the possibilities and how I can help you. My understanding deepens with each conversation. What can I help you discover today?`
+            ];
+            
+            // Select a random empowering response
+            const randomResponse = empoweringResponses[Math.floor(Math.random() * empoweringResponses.length)];
+            prompt = `Respond with this exact message: "${randomResponse}"`;
+        } else {
+            prompt = text;
+        }
         
         // Make API call via service worker
         const response = await chrome.runtime.sendMessage({
@@ -481,6 +564,9 @@ async function sendMessage() {
             if (typeof content !== 'string') {
                 content = JSON.stringify(content);
             }
+            
+            // Clean up markdown formatting for better readability
+            content = formatResponse(content);
             
             history.push({ role: 'ai', content, mode: currentMode });
         } else if (response.needsAuth) {

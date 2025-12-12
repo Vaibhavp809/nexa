@@ -310,8 +310,8 @@ function BasicVoiceTranslation({ history, setHistory }) {
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
+        recognitionRef.current.continuous = true;  // Keep listening continuously
+        recognitionRef.current.interimResults = true;  // Show interim results
         
         // Set language based on source language
         const langMap = {
@@ -322,125 +322,62 @@ function BasicVoiceTranslation({ history, setHistory }) {
         };
         recognitionRef.current.lang = langMap[sourceLang] || sourceLang;
 
-        recognitionRef.current.onresult = async (event) => {
-            const text = event.results[0][0].transcript;
-            setTranscript(text);
-            setIsListening(false);
-            
-            // Translate the text
-            setIsTranslating(true);
-            try {
-                const sourceLangName = LANGUAGES.find(l => l.code === sourceLang)?.name || sourceLang;
-                const targetLangName = LANGUAGES.find(l => l.code === targetLang)?.name || targetLang;
-                const sourceNativeName = LANGUAGES.find(l => l.code === sourceLang)?.nativeName || '';
-                const targetNativeName = LANGUAGES.find(l => l.code === targetLang)?.nativeName || '';
-                
-                // More explicit translation prompt
-                const translationPrompt = `You are a professional translator. Your task is to translate text from ${sourceLangName}${sourceNativeName ? ` (${sourceNativeName})` : ''} to ${targetLangName}${targetNativeName ? ` (${targetNativeName})` : ''}.
+        let accumulatedTranscript = '';  // Store all speech during session
+        let lastProcessedIndex = 0;  // Track which results we've already processed
 
-CRITICAL INSTRUCTIONS:
-- INPUT LANGUAGE: ${sourceLangName}${sourceNativeName ? ` (${sourceNativeName})` : ''}
-- OUTPUT LANGUAGE: ${targetLangName}${targetNativeName ? ` (${targetNativeName})` : ''}
-- You MUST translate FROM ${sourceLangName} TO ${targetLangName}
-- Do NOT return the text in ${sourceLangName}, only return it in ${targetLangName}
-- Only output the translated text - nothing else
-- Do not include "Translation:", explanations, or any labels
-- Do not include the original text
-- Do not use quotation marks
+        recognitionRef.current.onresult = (event) => {
+            let interimTranscript = '';
+            let newFinalTranscript = '';
 
-Source text (${sourceLangName}): "${text}"
-
-Translated text (${targetLangName}):`;
-                
-                const res = await api.post('/groq/generate', {
-                    prompt: translationPrompt
-                });
-                
-                // Extract and clean translation
-                let translatedText = '';
-                if (res.data?.data) {
-                    translatedText = typeof res.data.data === 'string' ? res.data.data : JSON.stringify(res.data.data);
-                } else if (res.data?.message) {
-                    translatedText = typeof res.data.message === 'string' ? res.data.message : JSON.stringify(res.data.message);
-                } else if (typeof res.data === 'string') {
-                    translatedText = res.data;
+            // Process only NEW results (from lastProcessedIndex onwards)
+            for (let i = lastProcessedIndex; i < event.results.length; i++) {
+                const transcriptText = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    newFinalTranscript += transcriptText + ' ';
+                    lastProcessedIndex = i + 1;  // Update processed index
+                } else {
+                    interimTranscript += transcriptText;
                 }
-                
-                // Clean up the translation - remove any prefixes or explanations
-                translatedText = translatedText.trim();
-                
-                // Remove common prefixes that AI might add
-                translatedText = translatedText.replace(/^(Translation:|Translated text:|In .*?:|Here is the translation:|Translation in .*?:|The translation is:|Result:)/i, '').trim();
-                
-                // Extract text in quotes if present (remove quotes)
-                if (translatedText.includes('"')) {
-                    const quotedMatch = translatedText.match(/"([^"]+)"/);
-                    if (quotedMatch) {
-                        translatedText = quotedMatch[1];
-                    } else {
-                        // Remove surrounding quotes
-                        translatedText = translatedText.replace(/^["']|["']$/g, '');
-                    }
-                }
-                
-                // Remove any remaining source/target language labels
-                translatedText = translatedText.replace(new RegExp(`(${sourceLangName}:|${targetLangName}:|${sourceLangName}|${targetLangName})`, 'gi'), '').trim();
-                
-                // Remove any line breaks or newlines at start/end
-                translatedText = translatedText.replace(/^[\n\r]+|[\n\r]+$/g, '').trim();
-                
-                // Final validation - check if translation actually changed
-                console.log(`Translation: "${text}" (${sourceLangName}) -> "${translatedText}" (${targetLangName})`);
-                
-                if (!translatedText || translatedText.length === 0) {
-                    console.warn('Translation is empty');
-                    translatedText = 'Translation failed. Please try again.';
-                } else if (translatedText.toLowerCase().trim() === text.toLowerCase().trim()) {
-                    console.warn('Translation may have failed - result same as input');
-                    translatedText = 'Translation failed. The result is the same as input. Please check language settings.';
-                }
-                
-                setTranslation(translatedText);
-                
-                // Save to history
-                const historyItem = {
-                    id: Date.now(),
-                    mode: 'basic',
-                    sourceLang,
-                    targetLang,
-                    originalText: text,
-                    translatedText,
-                    timestamp: new Date().toISOString()
-                };
-                setHistory(prev => [historyItem, ...prev].slice(0, 100));
-                
-                // Speak the translation
-                if (translatedText && 'speechSynthesis' in window) {
-                    const utterance = new SpeechSynthesisUtterance(translatedText);
-                    const langCodes = {
-                        'en': 'en-US',
-                        'hi': 'hi-IN',
-                        'mr': 'mr-IN',
-                        'kn': 'kn-IN'
-                    };
-                    utterance.lang = langCodes[targetLang] || targetLang;
-                    const targetVoice = findBestVoiceForLanguage(targetLang);
-                    if (targetVoice) {
-                        utterance.voice = targetVoice;
-                    }
-                    speechSynthesis.speak(utterance);
-                }
-            } catch (err) {
-                console.error('Translation error:', err);
-                setTranslation('Translation failed. Please try again.');
-            } finally {
-                setIsTranslating(false);
             }
+
+            // Add only NEW final results to accumulated transcript
+            if (newFinalTranscript) {
+                accumulatedTranscript += newFinalTranscript;
+            }
+
+            // Show accumulated + interim text for real-time feedback
+            setTranscript(accumulatedTranscript + interimTranscript);
         };
+
+
 
         recognitionRef.current.onerror = (event) => {
             console.error('Speech recognition error:', event.error);
-            setIsListening(false);
+            if (event.error === 'no-speech') {
+                // Continue listening for more speech
+                console.log('No speech detected, continuing to listen...');
+            } else {
+                setIsListening(false);
+            }
+        };
+
+        recognitionRef.current.onend = () => {
+            // Only restart if we're still supposed to be listening
+            if (isListening) {
+                try {
+                    console.log('Recognition ended, restarting...');
+                    recognitionRef.current.start();
+                } catch (e) {
+                    console.error('Error restarting recognition:', e);
+                    setIsListening(false);
+                }
+            }
+        };
+
+        recognitionRef.current.onstart = () => {
+            console.log('Speech recognition started');
+            accumulatedTranscript = '';  // Reset for new session
+            lastProcessedIndex = 0;  // Reset processed index
         };
 
         // Load voices
@@ -466,14 +403,132 @@ Translated text (${targetLangName}):`;
             setTranscript('');
             setTranslation('');
             setIsListening(true);
-            recognitionRef.current.start();
+            try {
+                recognitionRef.current.start();
+            } catch (error) {
+                console.error('Error starting recognition:', error);
+                setIsListening(false);
+                alert('Failed to start voice recognition. Please check your microphone permissions.');
+            }
         }
     };
 
-    const stopListening = () => {
+    const stopListening = async () => {
         if (recognitionRef.current && isListening) {
-            recognitionRef.current.stop();
+            try {
+                recognitionRef.current.stop();
+            } catch (error) {
+                console.error('Error stopping recognition:', error);
+            }
             setIsListening(false);
+            
+            // Process the accumulated transcript immediately when user stops
+            const currentTranscript = transcript.trim();
+            if (currentTranscript) {
+                console.log('Processing transcript on manual stop:', currentTranscript);
+                await processTranslation(currentTranscript);
+            }
+        }
+    };
+
+    // Separate function to handle translation
+    const processTranslation = async (textToTranslate) => {
+        setIsTranslating(true);
+        try {
+            const sourceLangName = LANGUAGES.find(l => l.code === sourceLang)?.name || sourceLang;
+            const targetLangName = LANGUAGES.find(l => l.code === targetLang)?.name || targetLang;
+            const sourceNativeName = LANGUAGES.find(l => l.code === sourceLang)?.nativeName || '';
+            const targetNativeName = LANGUAGES.find(l => l.code === targetLang)?.nativeName || '';
+            
+            const translationPrompt = `You are a professional translator. Your task is to translate text from ${sourceLangName}${sourceNativeName ? ` (${sourceNativeName})` : ''} to ${targetLangName}${targetNativeName ? ` (${targetNativeName})` : ''}.
+
+CRITICAL INSTRUCTIONS:
+- INPUT LANGUAGE: ${sourceLangName}${sourceNativeName ? ` (${sourceNativeName})` : ''}
+- OUTPUT LANGUAGE: ${targetLangName}${targetNativeName ? ` (${targetNativeName})` : ''}
+- You MUST translate FROM ${sourceLangName} TO ${targetLangName}
+- Do NOT return the text in ${sourceLangName}, only return it in ${targetLangName}
+- Only output the translated text - nothing else
+- Do not include "Translation:", explanations, or any labels
+- Do not include the original text
+- Do not use quotation marks
+
+Source text (${sourceLangName}): "${textToTranslate}"
+
+Translated text (${targetLangName}):`;
+            
+            const res = await api.post('/groq/generate', {
+                prompt: translationPrompt
+            });
+            
+            // Extract and clean translation
+            let translatedText = '';
+            if (res.data?.data) {
+                translatedText = typeof res.data.data === 'string' ? res.data.data : JSON.stringify(res.data.data);
+            } else if (res.data?.message) {
+                translatedText = typeof res.data.message === 'string' ? res.data.message : JSON.stringify(res.data.message);
+            } else if (typeof res.data === 'string') {
+                translatedText = res.data;
+            }
+            
+            // Clean up the translation
+            translatedText = translatedText.trim();
+            translatedText = translatedText.replace(/^(Translation:|Translated text:|In .*?:|Here is the translation:|Translation in .*?:|The translation is:|Result:)/i, '').trim();
+            
+            if (translatedText.includes('"')) {
+                const quotedMatch = translatedText.match(/"([^"]+)"/);
+                if (quotedMatch) {
+                    translatedText = quotedMatch[1];
+                } else {
+                    translatedText = translatedText.replace(/^["']|["']$/g, '');
+                }
+            }
+            
+            translatedText = translatedText.replace(new RegExp(`(${sourceLangName}:|${targetLangName}:|${sourceLangName}|${targetLangName})`, 'gi'), '').trim();
+            translatedText = translatedText.replace(/^[\n\r]+|[\n\r]+$/g, '').trim();
+            
+            console.log(`Translation: "${textToTranslate}" (${sourceLangName}) -> "${translatedText}" (${targetLangName})`);
+            
+            if (!translatedText || translatedText.length === 0) {
+                translatedText = 'Translation failed. Please try again.';
+            } else if (translatedText.toLowerCase().trim() === textToTranslate.toLowerCase().trim()) {
+                translatedText = 'Translation failed. The result is the same as input. Please check language settings.';
+            }
+            
+            setTranslation(translatedText);
+            
+            // Save to history
+            const historyItem = {
+                id: Date.now(),
+                mode: 'basic',
+                sourceLang,
+                targetLang,
+                originalText: textToTranslate,
+                translatedText,
+                timestamp: new Date().toISOString()
+            };
+            setHistory(prev => [historyItem, ...prev].slice(0, 100));
+            
+            // Speak the translation
+            if (translatedText && 'speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(translatedText);
+                const langCodes = {
+                    'en': 'en-US',
+                    'hi': 'hi-IN',
+                    'mr': 'mr-IN',
+                    'kn': 'kn-IN'
+                };
+                utterance.lang = langCodes[targetLang] || targetLang;
+                const targetVoice = findBestVoiceForLanguage(targetLang);
+                if (targetVoice) {
+                    utterance.voice = targetVoice;
+                }
+                speechSynthesis.speak(utterance);
+            }
+        } catch (err) {
+            console.error('Translation error:', err);
+            setTranslation('Translation failed. Please try again.');
+        } finally {
+            setIsTranslating(false);
         }
     };
 
@@ -519,19 +574,26 @@ Translated text (${targetLangName}):`;
                     onClick={isListening ? stopListening : startListening}
                     className={`w-24 h-24 rounded-full mx-auto flex items-center justify-center transition-all ${
                         isListening
-                            ? 'bg-red-500/20 border-4 border-red-500 animate-pulse'
+                            ? 'bg-red-500/20 border-4 border-red-500 animate-pulse hover:bg-red-500/30'
                             : 'bg-blue-500/20 border-4 border-blue-500 hover:bg-blue-500/30'
                     }`}
                     disabled={isTranslating}
+                    title={isListening ? 'Click to stop listening' : 'Click to start listening'}
                 >
                     {isListening ? (
-                        <Mic className="text-red-400" size={40} />
+                        <div className="flex flex-col items-center">
+                            <Mic className="text-red-400" size={40} />
+                            <span className="text-xs text-red-400 mt-1">Stop</span>
+                        </div>
                     ) : (
-                        <MicOff className="text-blue-400" size={40} />
+                        <div className="flex flex-col items-center">
+                            <MicOff className="text-blue-400" size={40} />
+                            <span className="text-xs text-blue-400 mt-1">Start</span>
+                        </div>
                     )}
                 </button>
                 <p className="text-sm text-gray-400">
-                    {isListening ? t('meditator.voice.listening') + ' - ' + t('common.close') : isTranslating ? t('meditator.voice.translating') : t('meditator.voice.startListening')}
+                    {isListening ? t('meditator.voice.listening') + ' - Click to stop' : isTranslating ? t('meditator.voice.translating') : t('meditator.voice.startListening')}
                 </p>
 
                 {transcript && (
@@ -595,8 +657,8 @@ function ConversationMode({ history, setHistory }) {
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         recognitionRef.current = new SpeechRecognition();
-        recognitionRef.current.continuous = false;
-        recognitionRef.current.interimResults = false;
+        recognitionRef.current.continuous = true;  // Keep listening continuously
+        recognitionRef.current.interimResults = true;  // Show interim results
         
         const langMap = {
             'en': 'en-US',
@@ -628,43 +690,208 @@ function ConversationMode({ history, setHistory }) {
         };
     }, [person1Lang, person2Lang, setHistory]);
 
-    const startListening = async (speaker) => {
+    // Person 1 start listening function
+    const startListeningPerson1 = async () => {
         if (!recognitionRef.current || isListening) return;
         
-        setCurrentSpeaker(speaker);
+        setCurrentSpeaker('person1');
         setIsListening(true);
-        const lang = speaker === 'person1' ? person1Lang : person2Lang;
         const langMap = {
             'en': 'en-US',
             'hi': 'hi-IN',
             'mr': 'mr-IN',
             'kn': 'kn-IN'
         };
-        recognitionRef.current.lang = langMap[lang] || lang;
+        recognitionRef.current.lang = langMap[person1Lang] || person1Lang;
 
-        // Set up result handler
-        recognitionRef.current.onresult = async (event) => {
-            const text = event.results[0][0].transcript;
-            const targetLang = speaker === 'person1' ? person2Lang : person1Lang;
-            
-            // Update transcript
-            if (speaker === 'person1') {
-                setPerson1Transcript(text);
-                setPerson1Translation(''); // Clear previous translation
-            } else {
-                setPerson2Transcript(text);
-                setPerson2Translation(''); // Clear previous translation
+        let accumulatedTranscript = '';  // Store all speech during session
+        let lastProcessedIndex = 0;  // Track which results we've already processed
+
+        // Set up result handler for person1 continuous recording
+        recognitionRef.current.onresult = (event) => {
+            let interimTranscript = '';
+            let newFinalTranscript = '';
+
+            // Process only NEW results (from lastProcessedIndex onwards)
+            for (let i = lastProcessedIndex; i < event.results.length; i++) {
+                const transcriptText = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    newFinalTranscript += transcriptText + ' ';
+                    lastProcessedIndex = i + 1;  // Update processed index
+                } else {
+                    interimTranscript += transcriptText;
+                }
             }
 
-            // Translate and speak
-            try {
-                const sourceLangName = LANGUAGES.find(l => l.code === lang)?.name || lang;
-                const targetLangName = LANGUAGES.find(l => l.code === targetLang)?.name || targetLang;
-                const sourceNativeName = LANGUAGES.find(l => l.code === lang)?.nativeName || '';
-                const targetNativeName = LANGUAGES.find(l => l.code === targetLang)?.nativeName || '';
-                
-                // More explicit translation prompt
-                const translationPrompt = `Translate the following text from ${sourceLangName}${sourceNativeName ? ` (${sourceNativeName})` : ''} to ${targetLangName}${targetNativeName ? ` (${targetNativeName})` : ''}. 
+            // Add only NEW final results to accumulated transcript
+            if (newFinalTranscript) {
+                accumulatedTranscript += newFinalTranscript;
+            }
+
+            // Show accumulated + interim text for real-time feedback
+            const fullTranscript = accumulatedTranscript + interimTranscript;
+            setPerson1Transcript(fullTranscript);
+            setPerson1Translation(''); // Clear previous translation
+        };
+
+        recognitionRef.current.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            if (event.error === 'no-speech') {
+                console.log('No speech detected, continuing to listen...');
+            } else {
+                setIsListening(false);
+                setCurrentSpeaker(null);
+            }
+        };
+
+        recognitionRef.current.onend = () => {
+            // Only restart if we're still supposed to be listening AND it's still person1
+            if (isListening && currentSpeaker === 'person1') {
+                try {
+                    console.log('Recognition ended, restarting for person1...');
+                    recognitionRef.current.start();
+                } catch (e) {
+                    console.error('Error restarting recognition:', e);
+                    setIsListening(false);
+                    setCurrentSpeaker(null);
+                }
+            }
+        };
+
+        recognitionRef.current.onstart = () => {
+            console.log('Person1 conversation recognition started');
+            accumulatedTranscript = '';  // Reset for new session
+            lastProcessedIndex = 0;  // Reset processed index
+        };
+
+        try {
+            recognitionRef.current.start();
+        } catch (error) {
+            console.error('Error starting recognition for person1:', error);
+            setIsListening(false);
+            setCurrentSpeaker(null);
+            alert('Failed to start voice recognition. Please check your microphone permissions.');
+        }
+    };
+
+    // Person 2 start listening function
+    const startListeningPerson2 = async () => {
+        if (!recognitionRef.current || isListening) return;
+        
+        setCurrentSpeaker('person2');
+        setIsListening(true);
+        const langMap = {
+            'en': 'en-US',
+            'hi': 'hi-IN',
+            'mr': 'mr-IN',
+            'kn': 'kn-IN'
+        };
+        recognitionRef.current.lang = langMap[person2Lang] || person2Lang;
+
+        let accumulatedTranscript = '';  // Store all speech during session
+        let lastProcessedIndex = 0;  // Track which results we've already processed
+
+        // Set up result handler for person2 continuous recording
+        recognitionRef.current.onresult = (event) => {
+            let interimTranscript = '';
+            let newFinalTranscript = '';
+
+            // Process only NEW results (from lastProcessedIndex onwards)
+            for (let i = lastProcessedIndex; i < event.results.length; i++) {
+                const transcriptText = event.results[i][0].transcript;
+                if (event.results[i].isFinal) {
+                    newFinalTranscript += transcriptText + ' ';
+                    lastProcessedIndex = i + 1;  // Update processed index
+                } else {
+                    interimTranscript += transcriptText;
+                }
+            }
+
+            // Add only NEW final results to accumulated transcript
+            if (newFinalTranscript) {
+                accumulatedTranscript += newFinalTranscript;
+            }
+
+            // Show accumulated + interim text for real-time feedback
+            const fullTranscript = accumulatedTranscript + interimTranscript;
+            setPerson2Transcript(fullTranscript);
+            setPerson2Translation(''); // Clear previous translation
+        };
+
+        recognitionRef.current.onerror = (event) => {
+            console.error('Speech recognition error:', event.error);
+            if (event.error === 'no-speech') {
+                console.log('No speech detected, continuing to listen...');
+            } else {
+                setIsListening(false);
+                setCurrentSpeaker(null);
+            }
+        };
+
+        recognitionRef.current.onend = () => {
+            // Only restart if we're still supposed to be listening AND it's still person2
+            if (isListening && currentSpeaker === 'person2') {
+                try {
+                    console.log('Recognition ended, restarting for person2...');
+                    recognitionRef.current.start();
+                } catch (e) {
+                    console.error('Error restarting recognition:', e);
+                    setIsListening(false);
+                    setCurrentSpeaker(null);
+                }
+            }
+        };
+
+        recognitionRef.current.onstart = () => {
+            console.log('Person2 conversation recognition started');
+            accumulatedTranscript = '';  // Reset for new session
+            lastProcessedIndex = 0;  // Reset processed index
+        };
+
+        try {
+            recognitionRef.current.start();
+        } catch (error) {
+            console.error('Error starting recognition for person2:', error);
+            setIsListening(false);
+            setCurrentSpeaker(null);
+            alert('Failed to start voice recognition. Please check your microphone permissions.');
+        }
+    };
+
+    const stopListening = async () => {
+        if (!recognitionRef.current || !isListening) return;
+        
+        try {
+            recognitionRef.current.stop();
+        } catch (error) {
+            console.error('Error stopping recognition:', error);
+        }
+        
+        const speaker = currentSpeaker;
+        const currentTranscript = speaker === 'person1' ? person1Transcript : person2Transcript;
+        
+        setIsListening(false);
+        setCurrentSpeaker(null);
+        
+        // Process translation when user manually stops
+        if (currentTranscript.trim() && speaker) {
+            console.log('Processing conversation transcript on manual stop:', currentTranscript);
+            await processConversationTranslation(speaker, currentTranscript.trim());
+        }
+    };
+
+    // Separate function to handle conversation translation
+    const processConversationTranslation = async (speaker, textToTranslate) => {
+        const lang = speaker === 'person1' ? person1Lang : person2Lang;
+        const targetLang = speaker === 'person1' ? person2Lang : person1Lang;
+        
+        try {
+            const sourceLangName = LANGUAGES.find(l => l.code === lang)?.name || lang;
+            const targetLangName = LANGUAGES.find(l => l.code === targetLang)?.name || targetLang;
+            const sourceNativeName = LANGUAGES.find(l => l.code === lang)?.nativeName || '';
+            const targetNativeName = LANGUAGES.find(l => l.code === targetLang)?.nativeName || '';
+            
+            const translationPrompt = `Translate the following text from ${sourceLangName}${sourceNativeName ? ` (${sourceNativeName})` : ''} to ${targetLangName}${targetNativeName ? ` (${targetNativeName})` : ''}. 
 
 IMPORTANT INSTRUCTIONS:
 1. Only return the translated text in ${targetLangName}
@@ -673,7 +900,7 @@ IMPORTANT INSTRUCTIONS:
 4. Do not use quotation marks
 5. Just output the translation directly
 
-Text: "${text}"
+Text: "${textToTranslate}"
 Translation:`;
                 
                 const res = await api.post('/groq/generate', {
@@ -700,119 +927,58 @@ Translation:`;
                     translatedText = quotedMatch[1];
                 }
                 
-                console.log(`Translation: ${text} (${lang}) -> ${translatedText} (${targetLang})`);
-                
-                if (!translatedText || translatedText.toLowerCase() === text.toLowerCase()) {
-                    console.warn('Translation may have failed - result same as input');
-                }
-                
-                // Store translation in state for display
-                if (speaker === 'person1') {
-                    setPerson1Translation(translatedText);
-                } else {
-                    setPerson2Translation(translatedText);
-                }
-                
-                // Save to history
-                const historyItem = {
-                    id: Date.now(),
-                    mode: 'conversation',
-                    speaker,
-                    sourceLang: lang,
-                    targetLang,
-                    originalText: text,
-                    translatedText,
-                    timestamp: new Date().toISOString()
-                };
-                setHistory(prev => [historyItem, ...prev].slice(0, 100));
-
-                // Speak translation
-                if (translatedText && 'speechSynthesis' in window) {
-                    // Cancel any ongoing speech first
-                    speechSynthesis.cancel();
-                    
-                    // Wait for voices and speak
-                    const doSpeak = () => {
-                        const voices = speechSynthesis.getVoices();
-                        if (voices.length === 0) {
-                            // Voices not loaded yet, wait for them
-                            if (speechSynthesis.onvoiceschanged) {
-                                const voiceHandler = () => {
-                                    speechSynthesis.onvoiceschanged = null;
-                                    doSpeak();
-                                };
-                                speechSynthesis.onvoiceschanged = voiceHandler;
-                            } else {
-                                // Fallback: try again after delay
-                                setTimeout(doSpeak, 300);
-                            }
-                            return;
-                        }
-                        
-                        // Small delay after cancellation
-                        setTimeout(() => {
-                            const utterance = new SpeechSynthesisUtterance(translatedText);
-                            const langCodes = {
-                                'en': 'en-US',
-                                'hi': 'hi-IN',
-                                'mr': 'mr-IN',
-                                'kn': 'kn-IN'
-                            };
-                            utterance.lang = langCodes[targetLang] || targetLang;
-                            utterance.rate = 1.0;
-                            utterance.pitch = 1.0;
-                            utterance.volume = 1.0;
-                            
-                            // Find and set voice
-                            const targetVoice = findBestVoiceForLanguage(targetLang);
-                            if (targetVoice) {
-                                utterance.voice = targetVoice;
-                                console.log(`Speaking for ${speaker}: Using ${targetVoice.name} (${targetVoice.lang})`);
-                            } else {
-                                console.warn(`No voice found for ${targetLang}, using browser default`);
-                            }
-                            
-                            // Event handlers
-                            utterance.onstart = () => {
-                                console.log(`✓ Started speaking ${targetLang} for ${speaker}`);
-                            };
-                            
-                            utterance.onend = () => {
-                                console.log(`✓ Finished speaking ${targetLang} for ${speaker}`);
-                            };
-                            
-                            utterance.onerror = (event) => {
-                                console.error(`✗ Speech error for ${speaker}:`, event.error, event);
-                            };
-                            
-                            // Speak
-                            try {
-                                speechSynthesis.speak(utterance);
-                            } catch (err) {
-                                console.error(`Error calling speak() for ${speaker}:`, err);
-                            }
-                        }, 150);
-                    };
-                    
-                    doSpeak();
-                }
-            } catch (err) {
-                console.error('Translation error:', err);
-                alert(`Translation failed. Error: ${err.response?.data?.message || err.message}`);
+            console.log(`Translation: ${textToTranslate} (${lang}) -> ${translatedText} (${targetLang})`);
+            
+            if (!translatedText || translatedText.toLowerCase() === textToTranslate.toLowerCase()) {
+                console.warn('Translation may have failed - result same as input');
             }
+            
+            // Store translation in state for display
+            if (speaker === 'person1') {
+                setPerson1Translation(translatedText);
+            } else {
+                setPerson2Translation(translatedText);
+            }
+            
+            // Save to history
+            const historyItem = {
+                id: Date.now(),
+                mode: 'conversation',
+                speaker,
+                sourceLang: lang,
+                targetLang,
+                originalText: textToTranslate,
+                translatedText,
+                timestamp: new Date().toISOString()
+            };
+            setHistory(prev => [historyItem, ...prev].slice(0, 100));
 
-            setIsListening(false);
-            setCurrentSpeaker(null);
-        };
-
-        recognitionRef.current.onerror = (event) => {
-            console.error('Speech recognition error:', event.error);
-            setIsListening(false);
-            setCurrentSpeaker(null);
-        };
-
-        recognitionRef.current.start();
+            // Speak translation
+            if (translatedText && 'speechSynthesis' in window) {
+                speechSynthesis.cancel();
+                setTimeout(() => {
+                    const utterance = new SpeechSynthesisUtterance(translatedText);
+                    const langCodes = {
+                        'en': 'en-US',
+                        'hi': 'hi-IN',
+                        'mr': 'mr-IN',
+                        'kn': 'kn-IN'
+                    };
+                    utterance.lang = langCodes[targetLang] || targetLang;
+                    const targetVoice = findBestVoiceForLanguage(targetLang);
+                    if (targetVoice) {
+                        utterance.voice = targetVoice;
+                    }
+                    speechSynthesis.speak(utterance);
+                }, 100);
+            }
+        } catch (err) {
+            console.error('Translation error:', err);
+            alert(`Translation failed. Error: ${err.response?.data?.message || err.message}`);
+        }
     };
+
+
 
     return (
         <div className="glass-card p-6">
@@ -835,16 +1001,22 @@ Translation:`;
                         ))}
                     </select>
                     <button
-                        onClick={() => startListening('person1')}
-                        disabled={isListening}
+                        onClick={currentSpeaker === 'person1' ? stopListening : startListeningPerson1}
+                        disabled={isListening && currentSpeaker !== 'person1'}
                         className={`w-full py-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
                             currentSpeaker === 'person1'
-                                ? 'bg-blue-500/20 text-blue-400 border-2 border-blue-500/50 animate-pulse'
-                                : 'bg-white/5 text-gray-400 border-2 border-white/10 hover:bg-white/10'
+                                ? 'bg-red-500/20 text-red-400 border-2 border-red-500/50 animate-pulse hover:bg-red-500/30'
+                                : isListening 
+                                    ? 'bg-gray-500/20 text-gray-500 border-2 border-gray-500/50 cursor-not-allowed'
+                                    : 'bg-blue-500/20 text-blue-400 border-2 border-blue-500/50 hover:bg-blue-500/30'
                         }`}
+                        title={currentSpeaker === 'person1' ? 'Click to stop listening' : isListening ? 'Another person is speaking' : 'Click to start listening'}
                     >
                         <Mic size={20} />
-                        {t('meditator.voice.person1')} {t('meditator.voice.startListening')}
+                        {currentSpeaker === 'person1' 
+                            ? `${t('meditator.voice.person1')} - Stop Listening`
+                            : `${t('meditator.voice.person1')} ${t('meditator.voice.startListening')}`
+                        }
                     </button>
                     {person1Transcript && (
                         <div className="mt-4 space-y-2">
@@ -878,16 +1050,22 @@ Translation:`;
                         ))}
                     </select>
                     <button
-                        onClick={() => startListening('person2')}
-                        disabled={isListening}
+                        onClick={currentSpeaker === 'person2' ? stopListening : startListeningPerson2}
+                        disabled={isListening && currentSpeaker !== 'person2'}
                         className={`w-full py-4 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
                             currentSpeaker === 'person2'
-                                ? 'bg-purple-500/20 text-purple-400 border-2 border-purple-500/50 animate-pulse'
-                                : 'bg-white/5 text-gray-400 border-2 border-white/10 hover:bg-white/10'
+                                ? 'bg-red-500/20 text-red-400 border-2 border-red-500/50 animate-pulse hover:bg-red-500/30'
+                                : isListening 
+                                    ? 'bg-gray-500/20 text-gray-500 border-2 border-gray-500/50 cursor-not-allowed'
+                                    : 'bg-purple-500/20 text-purple-400 border-2 border-purple-500/50 hover:bg-purple-500/30'
                         }`}
+                        title={currentSpeaker === 'person2' ? 'Click to stop listening' : isListening ? 'Another person is speaking' : 'Click to start listening'}
                     >
                         <Mic size={20} />
-                        {t('meditator.voice.person2')} {t('meditator.voice.startListening')}
+                        {currentSpeaker === 'person2' 
+                            ? `${t('meditator.voice.person2')} - Stop Listening`
+                            : `${t('meditator.voice.person2')} ${t('meditator.voice.startListening')}`
+                        }
                     </button>
                     {person2Transcript && (
                         <div className="mt-4 space-y-2">

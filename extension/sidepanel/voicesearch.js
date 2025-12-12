@@ -100,55 +100,76 @@ function setupSpeechRecognition() {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;  // Keep listening continuously
+    recognition.interimResults = true;  // Show interim results
     recognition.lang = 'en-US';
 
+    let accumulatedQuery = '';  // Store all speech during session
+    let lastProcessedIndex = 0;  // Track which results we've already processed
+
     recognition.onresult = (event) => {
-        const query = event.results[0][0].transcript;
-        searchInput.value = query;
-        isListening = false;
-        recordBtn.classList.remove('recording');
-        recordStatus.textContent = 'Click to search by voice';
-        recordBtn.textContent = '🎤';
-        
-        // Show preview
-        showPreview(query);
-        
-        // Perform search
-        performSearch(query);
+        let interimTranscript = '';
+        let newFinalTranscript = '';
+
+        // Process only NEW results (from lastProcessedIndex onwards)
+        for (let i = lastProcessedIndex; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+                newFinalTranscript += transcript + ' ';
+                lastProcessedIndex = i + 1;  // Update processed index
+            } else {
+                interimTranscript += transcript;
+            }
+        }
+
+        // Add only NEW final results to accumulated query
+        if (newFinalTranscript) {
+            accumulatedQuery += newFinalTranscript;
+        }
+
+        // Show accumulated + interim text for real-time feedback
+        const fullQuery = accumulatedQuery + interimTranscript;
+        searchInput.value = fullQuery;
+        showPreview(fullQuery);
     };
+
+
 
     recognition.onerror = async (event) => {
         console.error('Speech recognition error:', event.error);
-        isListening = false;
-        recordBtn.classList.remove('recording');
-        recordStatus.textContent = 'Click to search by voice';
-        recordBtn.textContent = '🎤';
         
         if (event.error === 'not-allowed' || event.error === 'permission-denied') {
             micPermission = 'denied';
             micPermissionPrompt.classList.remove('hidden');
+            stopListening();
         } else if (event.error === 'no-speech') {
-            recordStatus.textContent = 'No speech detected. Try again.';
-            setTimeout(() => {
-                recordStatus.textContent = 'Click to search by voice';
-            }, 2000);
+            // No speech detected - continue listening
+            console.log('No speech detected, continuing to listen...');
         } else if (event.error === 'audio-capture') {
             alert('No microphone found. Please connect a microphone and try again.');
+            stopListening();
+        } else {
+            console.warn('Speech recognition error:', event.error, '- continuing to listen');
         }
     };
 
     recognition.onend = () => {
+        // Only restart if we're still supposed to be listening
         if (isListening) {
-            // Recognition ended but we're still in listening mode - restart
             try {
+                console.log('Recognition ended, restarting...');
                 recognition.start();
             } catch (e) {
                 console.error('Error restarting recognition:', e);
                 stopListening();
             }
         }
+    };
+
+    recognition.onstart = () => {
+        console.log('Voice search recognition started');
+        accumulatedQuery = '';  // Reset for new session
+        lastProcessedIndex = 0;  // Reset processed index
     };
 }
 
@@ -177,8 +198,13 @@ async function startListening() {
         searchPreview.classList.remove('show');
         isListening = true;
         recordBtn.classList.add('recording');
-        recordStatus.textContent = 'Listening...';
+        recordStatus.innerHTML = '<span class="recording-indicator"></span>Listening... Click to stop';
         recordBtn.textContent = '⏹️';
+        recordBtn.title = 'Click to stop listening';
+        
+        // Add visual feedback
+        recordBtn.style.animation = 'pulse 1.5s ease-in-out infinite';
+        
         recognition.start();
     } catch (error) {
         console.error('Error starting recognition:', error);
@@ -207,6 +233,17 @@ function stopListening() {
     recordBtn.classList.remove('recording');
     recordStatus.textContent = 'Click to search by voice';
     recordBtn.textContent = '🎤';
+    recordBtn.title = 'Click to start voice search';
+    
+    // Remove visual feedback
+    recordBtn.style.animation = '';
+    
+    // Process search when user manually stops
+    const currentQuery = searchInput.value.trim();
+    if (currentQuery) {
+        console.log('Processing search query on manual stop:', currentQuery);
+        performSearch(currentQuery);
+    }
 }
 
 // Perform search

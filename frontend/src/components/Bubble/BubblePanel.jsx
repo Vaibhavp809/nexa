@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { MessageSquare, FileText, Languages, StickyNote, Settings, Send, Copy, Check, Bot, Sparkles, Zap, CircleDot, Mic, Search, Calendar, Volume2, VolumeX, Trash2, X, Clock } from 'lucide-react';
+import { MessageSquare, FileText, Languages, StickyNote, Settings, Send, Copy, Check, Bot, Sparkles, Zap, CircleDot, Mic, Search, Calendar, Volume2, VolumeX, Trash2, X, Clock, Edit3 } from 'lucide-react';
 import { Button } from '../../ui/Button';
 import api from '../../api';
 import { useLocalStorage } from '../../hooks/useLocalStorage';
@@ -230,8 +230,8 @@ function TranslateTab() {
         if (mode === 'voice' && ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = false;
-            recognitionRef.current.interimResults = false;
+            recognitionRef.current.continuous = true;  // Keep listening continuously
+            recognitionRef.current.interimResults = true;  // Show interim results
             
             const langMap = {
                 'en': 'en-US',
@@ -241,16 +241,62 @@ function TranslateTab() {
             };
             recognitionRef.current.lang = langMap[sourceLang] || sourceLang;
 
-            recognitionRef.current.onresult = async (event) => {
-                const spokenText = event.results[0][0].transcript;
-                setTranscript(spokenText);
-                setText(spokenText);
-                setIsListening(false);
-                // Auto-translate
-                await handleTranslate(spokenText);
+            let accumulatedTranscript = '';  // Store all speech during session
+            let lastProcessedIndex = 0;  // Track which results we've already processed
+
+            recognitionRef.current.onresult = (event) => {
+                let interimTranscript = '';
+                let newFinalTranscript = '';
+
+                // Process only NEW results (from lastProcessedIndex onwards)
+                for (let i = lastProcessedIndex; i < event.results.length; i++) {
+                    const transcriptText = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        newFinalTranscript += transcriptText + ' ';
+                        lastProcessedIndex = i + 1;  // Update processed index
+                    } else {
+                        interimTranscript += transcriptText;
+                    }
+                }
+
+                // Add only NEW final results to accumulated transcript
+                if (newFinalTranscript) {
+                    accumulatedTranscript += newFinalTranscript;
+                }
+
+                // Show accumulated + interim text for real-time feedback
+                const fullTranscript = accumulatedTranscript + interimTranscript;
+                setTranscript(fullTranscript);
+                setText(fullTranscript);
             };
 
-            recognitionRef.current.onerror = () => setIsListening(false);
+            recognitionRef.current.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                if (event.error === 'no-speech') {
+                    console.log('No speech detected, continuing to listen...');
+                } else {
+                    setIsListening(false);
+                }
+            };
+
+            recognitionRef.current.onend = () => {
+                // Only restart if we're still supposed to be listening
+                if (isListening) {
+                    try {
+                        console.log('Recognition ended, restarting...');
+                        recognitionRef.current.start();
+                    } catch (e) {
+                        console.error('Error restarting recognition:', e);
+                        setIsListening(false);
+                    }
+                }
+            };
+
+            recognitionRef.current.onstart = () => {
+                console.log('Speech recognition started');
+                accumulatedTranscript = '';  // Reset for new session
+                lastProcessedIndex = 0;  // Reset processed index
+            };
 
             return () => {
                 if (recognitionRef.current) recognitionRef.current.stop();
@@ -262,7 +308,32 @@ function TranslateTab() {
         if (recognitionRef.current && !isListening) {
             setIsListening(true);
             setTranscript('');
-            recognitionRef.current.start();
+            setText('');
+            try {
+                recognitionRef.current.start();
+            } catch (error) {
+                console.error('Error starting voice recognition:', error);
+                setIsListening(false);
+                alert('Failed to start voice recognition. Please check your microphone permissions.');
+            }
+        }
+    };
+
+    const stopListening = async () => {
+        if (recognitionRef.current && isListening) {
+            try {
+                recognitionRef.current.stop();
+            } catch (error) {
+                console.error('Error stopping voice recognition:', error);
+            }
+            setIsListening(false);
+            
+            // Process translation when user manually stops
+            const currentText = transcript.trim();
+            if (currentText) {
+                console.log('Processing transcript on manual stop:', currentText);
+                await handleTranslate(currentText);
+            }
         }
     };
 
@@ -392,11 +463,10 @@ Translated text (${targetLangName}):`;
                     <select
                         value={sourceLang}
                         onChange={e => setSourceLang(e.target.value)}
-                        className="input-field text-xs bg-black/20 text-white w-full"
-                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+                        className="w-full px-2 py-1.5 text-xs bg-gray-900 border border-gray-600 rounded text-white focus:border-blue-500 focus:outline-none"
                     >
                         {LANGUAGES.map(lang => (
-                            <option key={lang.code} value={lang.code} style={{ backgroundColor: '#111827', color: '#ffffff' }}>
+                            <option key={lang.code} value={lang.code} className="bg-gray-900 text-white">
                                 {lang.name}
                             </option>
                         ))}
@@ -407,11 +477,10 @@ Translated text (${targetLangName}):`;
                     <select
                         value={targetLang}
                         onChange={e => setTargetLang(e.target.value)}
-                        className="input-field text-xs bg-black/20 text-white w-full"
-                        style={{ backgroundColor: 'rgba(0, 0, 0, 0.2)' }}
+                        className="w-full px-2 py-1.5 text-xs bg-gray-900 border border-gray-600 rounded text-white focus:border-blue-500 focus:outline-none"
                     >
                         {LANGUAGES.filter(l => l.code !== sourceLang).map(lang => (
-                            <option key={lang.code} value={lang.code} style={{ backgroundColor: '#111827', color: '#ffffff' }}>
+                            <option key={lang.code} value={lang.code} className="bg-gray-900 text-white">
                                 {lang.name}
                             </option>
                         ))}
@@ -423,14 +492,22 @@ Translated text (${targetLangName}):`;
             {mode === 'voice' ? (
                 <div className="space-y-3">
                     <button
-                        onClick={isListening ? () => { recognitionRef.current?.stop(); setIsListening(false); } : startListening}
+                        onClick={isListening ? () => { 
+                            try {
+                                recognitionRef.current?.stop(); 
+                            } catch (e) {
+                                console.error('Error stopping recognition:', e);
+                            }
+                            setIsListening(false); 
+                        } : startListening}
                         disabled={loading}
                         className={`w-full py-3 rounded-lg font-semibold transition-all flex items-center justify-center gap-2 ${
-                            isListening ? 'bg-red-500/20 text-red-400 border border-red-500/50 animate-pulse' : 'bg-purple-500/20 text-purple-400 border border-purple-500/50'
+                            isListening ? 'bg-red-500/20 text-red-400 border border-red-500/50 animate-pulse hover:bg-red-500/30' : 'bg-purple-500/20 text-purple-400 border border-purple-500/50 hover:bg-purple-500/30'
                         }`}
+                        title={isListening ? 'Click to stop listening' : 'Click to start voice input'}
                     >
                         <Mic size={16} />
-                        {isListening ? t('bubble.panels.translate.listening') : t('bubble.panels.translate.startListening')}
+                        {isListening ? 'Stop Listening' : t('bubble.panels.translate.startListening')}
                     </button>
                     {transcript && (
                         <div className="p-2 bg-white/5 rounded text-xs">
@@ -581,6 +658,8 @@ function VoiceNotesTab() {
     const [speechRate, setSpeechRate] = useState(1.0);
     const [isPlaying, setIsPlaying] = useState(false);
     const [playingNoteId, setPlayingNoteId] = useState(null);
+    const [editingNoteId, setEditingNoteId] = useState(null);
+    const [editingTitle, setEditingTitle] = useState('');
     const recognitionRef = useRef(null);
     const synthRef = useRef(null);
 
@@ -590,25 +669,61 @@ function VoiceNotesTab() {
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = true;
-            recognitionRef.current.interimResults = true;
+            recognitionRef.current.continuous = true;  // Keep listening continuously
+            recognitionRef.current.interimResults = true;  // Show interim results
             recognitionRef.current.lang = 'en-US';
+
+            let accumulatedTranscript = '';  // Store all speech during session
 
             recognitionRef.current.onresult = (event) => {
                 let interimTranscript = '';
                 let finalTranscript = '';
-                for (let i = event.resultIndex; i < event.results.length; i++) {
-                    const transcript = event.results[i][0].transcript;
+
+                // Process all results from the current session
+                for (let i = 0; i < event.results.length; i++) {
+                    const transcriptText = event.results[i][0].transcript;
                     if (event.results[i].isFinal) {
-                        finalTranscript += transcript + ' ';
+                        finalTranscript += transcriptText + ' ';
                     } else {
-                        interimTranscript += transcript;
+                        interimTranscript += transcriptText;
                     }
                 }
-                setTranscript(prev => prev + finalTranscript);
+
+                // Update accumulated transcript with final results
+                if (finalTranscript) {
+                    accumulatedTranscript += finalTranscript;
+                }
+
+                // Show accumulated + interim text for real-time feedback
+                setTranscript(accumulatedTranscript + interimTranscript);
             };
 
-            recognitionRef.current.onerror = () => setIsListening(false);
+            recognitionRef.current.onerror = (event) => {
+                console.error('Voice notes error:', event.error);
+                if (event.error === 'no-speech') {
+                    console.log('No speech detected, continuing to listen...');
+                } else {
+                    setIsListening(false);
+                }
+            };
+
+            recognitionRef.current.onend = () => {
+                // Only restart if we're still supposed to be listening
+                if (isListening) {
+                    try {
+                        console.log('Recognition ended, restarting...');
+                        recognitionRef.current.start();
+                    } catch (e) {
+                        console.error('Error restarting recognition:', e);
+                        setIsListening(false);
+                    }
+                }
+            };
+
+            recognitionRef.current.onstart = () => {
+                console.log('Voice notes recognition started');
+                accumulatedTranscript = '';  // Reset for new session
+            };
         }
 
         if ('speechSynthesis' in window) {
@@ -648,13 +763,23 @@ function VoiceNotesTab() {
         if (recognitionRef.current && !isListening) {
             setTranscript('');
             setIsListening(true);
-            recognitionRef.current.start();
+            try {
+                recognitionRef.current.start();
+            } catch (error) {
+                console.error('Error starting voice recognition:', error);
+                setIsListening(false);
+                alert('Failed to start voice recognition. Please check your microphone permissions.');
+            }
         }
     };
 
     const stopListening = () => {
         if (recognitionRef.current && isListening) {
-            recognitionRef.current.stop();
+            try {
+                recognitionRef.current.stop();
+            } catch (error) {
+                console.error('Error stopping voice recognition:', error);
+            }
             setIsListening(false);
         }
     };
@@ -720,18 +845,53 @@ function VoiceNotesTab() {
         }
     };
 
+    const startEditing = (note) => {
+        setEditingNoteId(note._id);
+        setEditingTitle(note.title);
+    };
+
+    const cancelEditing = () => {
+        setEditingNoteId(null);
+        setEditingTitle('');
+    };
+
+    const saveEdit = async (noteId) => {
+        if (!editingTitle.trim()) return;
+        try {
+            const noteToUpdate = savedNotes.find(n => n._id === noteId);
+            await api.put(`/notes/${noteId}`, {
+                ...noteToUpdate,
+                title: editingTitle.trim()
+            });
+            setEditingNoteId(null);
+            setEditingTitle('');
+            fetchVoiceNotes();
+        } catch (err) {
+            console.error('Error updating note title:', err);
+            alert('Error updating note title. Please try again.');
+        }
+    };
+
     return (
         <div className="space-y-4">
             <div className="text-center">
                 <button
                     onClick={isListening ? stopListening : startListening}
                     className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center transition-all ${
-                        isListening ? 'bg-red-500/20 border-2 border-red-500 animate-pulse' : 'bg-blue-500/20 border-2 border-blue-500'
+                        isListening ? 'bg-red-500/20 border-2 border-red-500 animate-pulse hover:bg-red-500/30' : 'bg-blue-500/20 border-2 border-blue-500 hover:bg-blue-500/30'
                     }`}
+                    title={isListening ? 'Click to stop recording' : 'Click to start recording'}
                 >
-                    <Mic size={24} className={isListening ? 'text-red-400' : 'text-blue-400'} />
+                    <div className="flex flex-col items-center">
+                        <Mic size={24} className={isListening ? 'text-red-400' : 'text-blue-400'} />
+                        <span className={`text-[10px] mt-1 ${isListening ? 'text-red-400' : 'text-blue-400'}`}>
+                            {isListening ? 'Stop' : 'Start'}
+                        </span>
+                    </div>
                 </button>
-                <p className="text-xs text-gray-400 mt-2">{isListening ? 'Listening...' : 'Click to record'}</p>
+                <p className="text-xs text-gray-400 mt-2">
+                    {isListening ? 'Listening... Click to stop' : 'Click to record'}
+                </p>
             </div>
 
             {transcript && (
@@ -769,47 +929,90 @@ function VoiceNotesTab() {
                             <div key={note._id} className="p-3 bg-white/5 rounded-lg text-xs border border-white/10 hover:bg-white/10 transition-colors">
                                 <div className="flex items-start justify-between gap-2 mb-2">
                                     <div className="flex-1 min-w-0">
-                                        <p className="text-white font-semibold text-xs mb-1 truncate">{note.title}</p>
-                                        {note.content && (
+                                        {editingNoteId === note._id ? (
+                                            <div className="space-y-2">
+                                                <input
+                                                    type="text"
+                                                    value={editingTitle}
+                                                    onChange={(e) => setEditingTitle(e.target.value)}
+                                                    className="w-full px-2 py-1 text-xs bg-gray-800 border border-gray-600 rounded text-white focus:border-blue-500 focus:outline-none"
+                                                    placeholder="Enter note title..."
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter') saveEdit(note._id);
+                                                        if (e.key === 'Escape') cancelEditing();
+                                                    }}
+                                                    autoFocus
+                                                />
+                                                <div className="flex gap-1">
+                                                    <button
+                                                        onClick={() => saveEdit(note._id)}
+                                                        className="px-2 py-1 bg-green-500/20 text-green-400 rounded text-[10px] hover:bg-green-500/30"
+                                                        disabled={!editingTitle.trim()}
+                                                    >
+                                                        Save
+                                                    </button>
+                                                    <button
+                                                        onClick={cancelEditing}
+                                                        className="px-2 py-1 bg-gray-500/20 text-gray-400 rounded text-[10px] hover:bg-gray-500/30"
+                                                    >
+                                                        Cancel
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <p className="text-white font-semibold text-xs mb-1 truncate">{note.title}</p>
+                                        )}
+                                        {note.content && !editingNoteId && (
                                             <p className="text-gray-400 text-[10px] line-clamp-2 mb-2">
                                                 {note.content.substring(0, 100)}{note.content.length > 100 ? '...' : ''}
                                             </p>
                                         )}
                                     </div>
                                 </div>
-                                <div className="flex items-center justify-between gap-2">
-                                    <div className="flex gap-2">
-                                        <button
-                                            onClick={() => handlePlay(note.content, note._id)}
-                                            disabled={isPlaying && playingNoteId !== note._id}
-                                            className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
-                                                isPlaying && playingNoteId === note._id
-                                                    ? 'bg-green-500/20 text-green-400'
-                                                    : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400'
-                                            } ${isPlaying && playingNoteId !== note._id ? 'opacity-50 cursor-not-allowed' : ''}`}
-                                            title={isPlaying && playingNoteId === note._id ? 'Playing...' : 'Play voice note'}
-                                        >
-                                            {isPlaying && playingNoteId === note._id ? (
-                                                <>
-                                                    <VolumeX size={12} />
-                                                    <span>Stop</span>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Volume2 size={12} />
-                                                    <span>Play</span>
-                                                </>
-                                            )}
-                                        </button>
+                                {editingNoteId !== note._id && (
+                                    <div className="flex items-center justify-between gap-2">
+                                        <div className="flex gap-2">
+                                            <button
+                                                onClick={() => handlePlay(note.content, note._id)}
+                                                disabled={isPlaying && playingNoteId !== note._id}
+                                                className={`flex items-center gap-1 px-2 py-1 rounded text-[10px] transition-colors ${
+                                                    isPlaying && playingNoteId === note._id
+                                                        ? 'bg-green-500/20 text-green-400'
+                                                        : 'bg-blue-500/20 hover:bg-blue-500/30 text-blue-400'
+                                                } ${isPlaying && playingNoteId !== note._id ? 'opacity-50 cursor-not-allowed' : ''}`}
+                                                title={isPlaying && playingNoteId === note._id ? 'Playing...' : 'Play voice note'}
+                                            >
+                                                {isPlaying && playingNoteId === note._id ? (
+                                                    <>
+                                                        <VolumeX size={12} />
+                                                        <span>Stop</span>
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Volume2 size={12} />
+                                                        <span>Play</span>
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                        <div className="flex gap-1">
+                                            <button
+                                                onClick={() => startEditing(note)}
+                                                className="p-1.5 text-blue-400 hover:text-blue-300 hover:bg-blue-500/20 rounded transition-colors"
+                                                title="Edit note title"
+                                            >
+                                                <Edit3 size={12} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDelete(note._id)}
+                                                className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded transition-colors"
+                                                title="Delete voice note"
+                                            >
+                                                <Trash2 size={12} />
+                                            </button>
+                                        </div>
                                     </div>
-                                    <button
-                                        onClick={() => handleDelete(note._id)}
-                                        className="p-1.5 text-red-400 hover:text-red-300 hover:bg-red-500/20 rounded transition-colors"
-                                        title="Delete voice note"
-                                    >
-                                        <Trash2 size={12} />
-                                    </button>
-                                </div>
+                                )}
                             </div>
                         ))}
                     </div>
@@ -828,19 +1031,64 @@ function VoiceSearchTab() {
         if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
             const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
             recognitionRef.current = new SpeechRecognition();
-            recognitionRef.current.continuous = false;
-            recognitionRef.current.interimResults = false;
+            recognitionRef.current.continuous = true;  // Keep listening continuously
+            recognitionRef.current.interimResults = true;  // Show interim results
             recognitionRef.current.lang = 'en-US';
 
+            let accumulatedQuery = '';  // Store all speech during session
+
             recognitionRef.current.onresult = (event) => {
-                const query = event.results[0][0].transcript;
-                setSearchQuery(query);
-                setIsListening(false);
-                // Redirect to search
-                performSearch(query);
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                // Process all results from the current session
+                for (let i = 0; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript + ' ';
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                // Update accumulated query with final results
+                if (finalTranscript) {
+                    accumulatedQuery += finalTranscript;
+                }
+
+                // Show accumulated + interim text for real-time feedback
+                const fullQuery = accumulatedQuery + interimTranscript;
+                setSearchQuery(fullQuery);
             };
 
-            recognitionRef.current.onerror = () => setIsListening(false);
+
+
+            recognitionRef.current.onerror = (event) => {
+                console.error('Voice search error:', event.error);
+                if (event.error === 'no-speech') {
+                    console.log('No speech detected, continuing to listen...');
+                } else {
+                    setIsListening(false);
+                }
+            };
+
+            recognitionRef.current.onend = () => {
+                // Only restart if we're still supposed to be listening
+                if (isListening) {
+                    try {
+                        console.log('Recognition ended, restarting...');
+                        recognitionRef.current.start();
+                    } catch (e) {
+                        console.error('Error restarting recognition:', e);
+                        setIsListening(false);
+                    }
+                }
+            };
+
+            recognitionRef.current.onstart = () => {
+                console.log('Voice search recognition started');
+                accumulatedQuery = '';  // Reset for new session
+            };
         }
 
         return () => {
@@ -852,7 +1100,31 @@ function VoiceSearchTab() {
         if (recognitionRef.current && !isListening) {
             setIsListening(true);
             setSearchQuery('');
-            recognitionRef.current.start();
+            try {
+                recognitionRef.current.start();
+            } catch (error) {
+                console.error('Error starting voice search:', error);
+                setIsListening(false);
+                alert('Failed to start voice search. Please check your microphone permissions.');
+            }
+        }
+    };
+
+    const stopListening = () => {
+        if (recognitionRef.current && isListening) {
+            try {
+                recognitionRef.current.stop();
+            } catch (error) {
+                console.error('Error stopping voice search:', error);
+            }
+            setIsListening(false);
+            
+            // Process search when user manually stops
+            const currentQuery = searchQuery.trim();
+            if (currentQuery) {
+                console.log('Processing search query on manual stop:', currentQuery);
+                performSearch(currentQuery);
+            }
         }
     };
 
@@ -872,15 +1144,22 @@ function VoiceSearchTab() {
         <div className="space-y-4">
             <div className="text-center">
                 <button
-                    onClick={startListening}
-                    disabled={isListening}
+                    onClick={isListening ? stopListening : startListening}
                     className={`w-16 h-16 rounded-full mx-auto flex items-center justify-center transition-all ${
-                        isListening ? 'bg-red-500/20 border-2 border-red-500 animate-pulse' : 'bg-cyan-500/20 border-2 border-cyan-500'
+                        isListening ? 'bg-red-500/20 border-2 border-red-500 animate-pulse hover:bg-red-500/30' : 'bg-cyan-500/20 border-2 border-cyan-500 hover:bg-cyan-500/30'
                     }`}
+                    title={isListening ? 'Click to stop listening' : 'Click to start voice search'}
                 >
-                    <Mic size={24} className={isListening ? 'text-red-400' : 'text-cyan-400'} />
+                    <div className="flex flex-col items-center">
+                        <Mic size={24} className={isListening ? 'text-red-400' : 'text-cyan-400'} />
+                        <span className={`text-[10px] mt-1 ${isListening ? 'text-red-400' : 'text-cyan-400'}`}>
+                            {isListening ? 'Stop' : 'Start'}
+                        </span>
+                    </div>
                 </button>
-                <p className="text-xs text-gray-400 mt-2">{isListening ? 'Listening...' : 'Click to search by voice'}</p>
+                <p className="text-xs text-gray-400 mt-2">
+                    {isListening ? 'Listening... Click to stop' : 'Click to search by voice'}
+                </p>
             </div>
 
             <div className="space-y-2">

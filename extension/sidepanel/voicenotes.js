@@ -33,6 +33,8 @@ let isPlaying = false;
 let playingNoteId = null;
 let currentUtterance = null;
 let micPermission = null;
+let editingNoteId = null;
+let editingTitle = '';
 
 let currentLanguage = 'en';
 
@@ -120,24 +122,36 @@ function setupSpeechRecognition() {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    recognition.continuous = true;  // Keep listening continuously
+    recognition.interimResults = true;  // Show interim results for feedback
     recognition.lang = 'en-US';
+
+    let accumulatedTranscript = '';  // Store all speech during session
+    let lastProcessedIndex = 0;  // Track which results we've already processed
 
     recognition.onresult = (event) => {
         let interimTranscript = '';
-        let finalTranscript = '';
+        let newFinalTranscript = '';
 
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
+        // Process only NEW results (from lastProcessedIndex onwards)
+        for (let i = lastProcessedIndex; i < event.results.length; i++) {
+            const transcriptText = event.results[i][0].transcript;
             if (event.results[i].isFinal) {
-                finalTranscript += transcript + ' ';
+                newFinalTranscript += transcriptText + ' ';
+                lastProcessedIndex = i + 1;  // Update processed index
             } else {
-                interimTranscript += transcript;
+                interimTranscript += transcriptText;
             }
         }
 
-        transcript.value += finalTranscript;
+        // Add only NEW final results to accumulated transcript
+        if (newFinalTranscript) {
+            accumulatedTranscript += newFinalTranscript;
+        }
+
+        // Show accumulated + interim text for real-time feedback
+        transcript.value = accumulatedTranscript + interimTranscript;
+        
         // Scroll to bottom
         transcript.scrollTop = transcript.scrollHeight;
     };
@@ -149,23 +163,33 @@ function setupSpeechRecognition() {
             micPermissionPrompt.classList.remove('hidden');
             stopListening();
         } else if (event.error === 'no-speech') {
-            // No speech detected - this is normal, continue listening
+            // No speech detected - continue listening, don't stop
+            console.log('No speech detected, continuing to listen...');
         } else if (event.error === 'audio-capture') {
             alert('No microphone found. Please connect a microphone and try again.');
             stopListening();
+        } else {
+            console.warn('Speech recognition error:', event.error, '- continuing to listen');
         }
     };
 
     recognition.onend = () => {
+        // Only restart if we're still supposed to be listening (user hasn't clicked stop)
         if (isListening) {
-            // Automatically restart if still in listening mode
             try {
+                console.log('Recognition ended, restarting...');
                 recognition.start();
             } catch (e) {
                 console.error('Error restarting recognition:', e);
                 stopListening();
             }
         }
+    };
+
+    recognition.onstart = () => {
+        console.log('Speech recognition started');
+        accumulatedTranscript = '';  // Reset accumulated transcript for new session
+        lastProcessedIndex = 0;  // Reset processed index
     };
 }
 
@@ -292,6 +316,39 @@ function renderNotes() {
         const content = note.content || '';
         const preview = content.length > 100 ? content.substring(0, 100) + '...' : content;
         const isCurrentlyPlaying = isPlaying && playingNoteId === noteId;
+        const isEditing = editingNoteId === noteId;
+        
+        if (isEditing) {
+            return `
+                <div class="note-item" data-note-id="${noteId}">
+                    <div class="note-header">
+                        <div class="note-content-section">
+                            <input type="text" 
+                                   class="edit-title-input" 
+                                   value="${escapeHtml(editingTitle)}" 
+                                   placeholder="Enter note title..."
+                                   data-note-id="${noteId}"
+                                   style="width: 100%; padding: 8px; background: rgba(255, 255, 255, 0.1); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 4px; color: white; font-size: 14px; margin-bottom: 8px;">
+                            <div class="note-text">${escapeHtml(preview)}</div>
+                        </div>
+                    </div>
+                    <div class="note-actions">
+                        <button class="save-edit-btn" 
+                                data-note-id="${noteId}" 
+                                title="Save changes"
+                                style="padding: 6px 12px; background: rgba(34, 197, 94, 0.2); color: #22c55e; border: 1px solid rgba(34, 197, 94, 0.3); border-radius: 6px; font-size: 12px; cursor: pointer;">
+                            ✓ Save
+                        </button>
+                        <button class="cancel-edit-btn" 
+                                data-note-id="${noteId}" 
+                                title="Cancel editing"
+                                style="padding: 6px 12px; background: rgba(107, 114, 128, 0.2); color: #9ca3af; border: 1px solid rgba(107, 114, 128, 0.3); border-radius: 6px; font-size: 12px; cursor: pointer;">
+                            ✕ Cancel
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
         
         return `
             <div class="note-item" data-note-id="${noteId}">
@@ -307,6 +364,12 @@ function renderNotes() {
                             ${isPlaying && !isCurrentlyPlaying ? 'disabled' : ''}
                             title="${isCurrentlyPlaying ? 'Stop playing' : 'Play voice note'}">
                         ${isCurrentlyPlaying ? '⏸️ Stop' : '▶️ Play'}
+                    </button>
+                    <button class="edit-btn" 
+                            data-note-id="${noteId}" 
+                            title="Edit note title"
+                            style="padding: 6px 12px; background: rgba(59, 130, 246, 0.2); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 6px; font-size: 12px; cursor: pointer;">
+                        ✏️ Edit
                     </button>
                     <button class="note-delete" data-note-id="${noteId}" title="Delete voice note">
                         🗑️
@@ -342,8 +405,13 @@ async function startListening() {
         transcriptSection.classList.add('show');
         isListening = true;
         recordBtn.classList.add('recording');
-        recordStatus.textContent = 'Listening...';
+        recordStatus.innerHTML = '<span class="recording-indicator"></span>Listening... Click to stop';
         recordBtn.textContent = '⏹️';
+        recordBtn.title = 'Click to stop recording';
+        
+        // Add visual pulse effect
+        recordBtn.style.animation = 'pulse 1.5s ease-in-out infinite';
+        
         recognition.start();
     } catch (error) {
         console.error('Error starting recognition:', error);
@@ -370,8 +438,17 @@ function stopListening() {
     
     isListening = false;
     recordBtn.classList.remove('recording');
-    recordStatus.textContent = transcript.value.trim() ? 'Recording complete' : 'Click to record';
+    recordStatus.textContent = transcript.value.trim() ? 'Recording complete - Click to record again' : 'Click to record';
     recordBtn.textContent = '🎤';
+    recordBtn.title = 'Click to start recording';
+    
+    // Remove pulse effect
+    recordBtn.style.animation = '';
+    
+    // Process the recorded text if available
+    if (transcript.value.trim()) {
+        recordStatus.textContent = 'Recording complete - You can now save or record again';
+    }
 }
 
 // Save voice note
@@ -499,6 +576,116 @@ function playNote(noteId) {
     renderNotes();
 }
 
+// Start editing note title
+function startEditingNote(noteId) {
+    const note = notes.find(n => String(n._id || n.id) === String(noteId));
+    if (!note) return;
+    
+    editingNoteId = noteId;
+    editingTitle = note.title || 'Untitled Voice Note';
+    renderNotes();
+    
+    // Focus the input field after render
+    setTimeout(() => {
+        const input = notesList.querySelector(`input[data-note-id="${noteId}"]`);
+        if (input) {
+            input.focus();
+            input.select();
+        }
+    }, 50);
+}
+
+// Cancel editing
+function cancelEditing() {
+    editingNoteId = null;
+    editingTitle = '';
+    renderNotes();
+}
+
+// Save edited note title
+async function saveEditedNote(noteId) {
+    const input = notesList.querySelector(`input[data-note-id="${noteId}"]`);
+    if (!input) return;
+    
+    const newTitle = input.value.trim();
+    if (!newTitle) {
+        alert('Please enter a title for the note.');
+        input.focus();
+        return;
+    }
+    
+    try {
+        const result = await chrome.storage.local.get(['nexa_token']);
+        const token = result.nexa_token;
+        
+        if (!token) {
+            showLoginForm();
+            return;
+        }
+        
+        const note = notes.find(n => String(n._id || n.id) === String(noteId));
+        if (!note) return;
+        
+        // Show loading state
+        const saveBtn = notesList.querySelector(`button.save-edit-btn[data-note-id="${noteId}"]`);
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Saving...';
+        }
+        
+        const response = await fetch(`${BACKEND_BASE}/api/notes/${noteId}`, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                title: newTitle,
+                content: note.content,
+                color: note.color,
+                isPinned: note.isPinned,
+                type: note.type
+            })
+        });
+        
+        if (response.status === 401) {
+            await chrome.storage.local.remove(['nexa_token', 'nexa_user']);
+            showLoginForm();
+            return;
+        }
+        
+        if (!response.ok) {
+            throw new Error('Failed to update note title');
+        }
+        
+        const updatedNote = await response.json();
+        
+        // Update the note in our local array
+        const noteIndex = notes.findIndex(n => String(n._id || n.id) === String(noteId));
+        if (noteIndex !== -1) {
+            notes[noteIndex] = updatedNote;
+        }
+        
+        // Exit editing mode
+        editingNoteId = null;
+        editingTitle = '';
+        
+        // Re-render notes
+        renderNotes();
+        
+    } catch (error) {
+        console.error('Error updating note title:', error);
+        alert('Failed to update note title. Please try again.');
+        
+        // Restore button state
+        const saveBtn = notesList.querySelector(`button.save-edit-btn[data-note-id="${noteId}"]`);
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.textContent = '✓ Save';
+        }
+    }
+}
+
 // Delete note
 async function deleteNote(noteId) {
     if (!noteId) {
@@ -614,10 +801,13 @@ requestMicBtn.addEventListener('click', async () => {
     await requestMicrophonePermission();
 });
 
-// Event delegation for play and delete buttons
+// Event delegation for play, edit, and delete buttons
 notesList.addEventListener('click', (e) => {
     const playBtn = e.target.closest('.play-btn, .stop-btn');
     const deleteBtn = e.target.closest('.note-delete');
+    const editBtn = e.target.closest('.edit-btn');
+    const saveEditBtn = e.target.closest('.save-edit-btn');
+    const cancelEditBtn = e.target.closest('.cancel-edit-btn');
     
     if (playBtn) {
         e.preventDefault();
@@ -635,6 +825,53 @@ notesList.addEventListener('click', (e) => {
         if (noteId) {
             deleteNote(noteId);
         }
+    }
+    
+    if (editBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const noteId = editBtn.getAttribute('data-note-id');
+        if (noteId) {
+            startEditingNote(noteId);
+        }
+    }
+    
+    if (saveEditBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        const noteId = saveEditBtn.getAttribute('data-note-id');
+        if (noteId) {
+            saveEditedNote(noteId);
+        }
+    }
+    
+    if (cancelEditBtn) {
+        e.preventDefault();
+        e.stopPropagation();
+        cancelEditing();
+    }
+});
+
+// Handle keyboard events for editing
+notesList.addEventListener('keydown', (e) => {
+    if (e.target.classList.contains('edit-title-input')) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const noteId = e.target.getAttribute('data-note-id');
+            if (noteId) {
+                saveEditedNote(noteId);
+            }
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            cancelEditing();
+        }
+    }
+});
+
+// Handle input changes for editing
+notesList.addEventListener('input', (e) => {
+    if (e.target.classList.contains('edit-title-input')) {
+        editingTitle = e.target.value;
     }
 });
 

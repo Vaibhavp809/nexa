@@ -146,8 +146,8 @@ function initSpeechRecognition() {
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     recognition = new SpeechRecognition();
-    recognition.continuous = false;
-    recognition.interimResults = false;
+    recognition.continuous = true;  // Keep listening continuously
+    recognition.interimResults = true;  // Show interim results for real-time feedback
 
     const langMap = {
         'en': 'en-US',
@@ -157,40 +157,8 @@ function initSpeechRecognition() {
     };
     recognition.lang = langMap[sourceLang] || sourceLang;
 
-    recognition.onresult = async (event) => {
-        const spokenText = event.results[0][0].transcript;
-        transcriptText.textContent = spokenText;
-        transcriptContainer.style.display = 'block';
-        isListening = false;
-        updateVoiceButton();
-        
-        // Auto-translate
-        await handleTranslate(spokenText);
-    };
-
-    recognition.onerror = async (event) => {
-        console.error('Speech recognition error:', event.error);
-        isListening = false;
-        updateVoiceButton();
-        
-        if (event.error === 'not-allowed' || event.error === 'permission-denied') {
-            micPermission = 'denied';
-            updateVoiceButtonState();
-            alert('Microphone permission denied. Please enable it in your browser settings or click the microphone icon in the address bar.');
-        } else if (event.error === 'no-speech') {
-            // No speech detected - this is normal, just stop listening
-            console.log('No speech detected');
-        } else if (event.error === 'audio-capture') {
-            alert('No microphone found. Please connect a microphone and try again.');
-        } else {
-            console.warn('Speech recognition error:', event.error);
-        }
-    };
-
-    recognition.onend = () => {
-        isListening = false;
-        updateVoiceButton();
-    };
+    // Note: onresult, onerror, and onend handlers will be set up dynamically
+    // based on the mode (basic or conversation) when starting recognition
 
     return recognition;
 }
@@ -320,13 +288,15 @@ function updateVoiceButton() {
     if (isListening) {
         voiceBtn.classList.add('listening');
         voiceIcon.textContent = '🔴';
-        voiceText.textContent = 'Listening...';
+        voiceText.textContent = 'Stop Listening';
         voiceBtn.disabled = false;
+        voiceBtn.title = 'Click to stop listening and translate';
     } else {
         voiceBtn.classList.remove('listening');
         voiceIcon.textContent = '🎤';
         voiceText.textContent = 'Start Listening';
         voiceBtn.disabled = false;
+        voiceBtn.title = 'Click to start listening';
     }
 }
 
@@ -434,9 +404,21 @@ voiceBtn.addEventListener('click', async () => {
     }
 
     if (isListening) {
-        recognition.stop();
+        // Stop listening and process accumulated transcript
+        try {
+            recognition.stop();
+        } catch (error) {
+            console.error('Error stopping recognition:', error);
+        }
         isListening = false;
         updateVoiceButton();
+        
+        // Process the accumulated transcript when user manually stops
+        const currentTranscript = transcriptText.textContent.trim();
+        if (currentTranscript) {
+            console.log('Processing transcript on manual stop:', currentTranscript);
+            await handleTranslate(currentTranscript);
+        }
     } else {
         try {
             // Ensure microphone permission before starting
@@ -447,7 +429,7 @@ voiceBtn.addEventListener('click', async () => {
                 }
             }
 
-            // Set up recognition handlers for basic mode
+            // Set up recognition handlers for basic mode with continuous recording
             const langMap = {
                 'en': 'en-US',
                 'hi': 'hi-IN',
@@ -455,41 +437,79 @@ voiceBtn.addEventListener('click', async () => {
                 'kn': 'kn-IN'
             };
             recognition.lang = langMap[sourceLang] || sourceLang;
+
+            let accumulatedTranscript = '';  // Store all speech during session
+            let lastProcessedIndex = 0;  // Track which results we've already processed
             
-            recognition.onresult = async (event) => {
-                const spokenText = event.results[0][0].transcript;
-                transcriptText.textContent = spokenText;
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let newFinalTranscript = '';
+
+                // Process only NEW results (from lastProcessedIndex onwards)
+                for (let i = lastProcessedIndex; i < event.results.length; i++) {
+                    const transcriptText = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        newFinalTranscript += transcriptText + ' ';
+                        lastProcessedIndex = i + 1;  // Update processed index
+                    } else {
+                        interimTranscript += transcriptText;
+                    }
+                }
+
+                // Add only NEW final results to accumulated transcript
+                if (newFinalTranscript) {
+                    accumulatedTranscript += newFinalTranscript;
+                }
+
+                // Show accumulated + interim text for real-time feedback
+                const fullTranscript = accumulatedTranscript + interimTranscript;
+                transcriptText.textContent = fullTranscript;
                 transcriptContainer.style.display = 'block';
-                isListening = false;
-                updateVoiceButton();
-                
-                // Auto-translate
-                await handleTranslate(spokenText);
             };
             
-            recognition.onerror = async (event) => {
+            recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
-                isListening = false;
-                updateVoiceButton();
-                
                 if (event.error === 'not-allowed' || event.error === 'permission-denied') {
                     micPermission = 'denied';
                     updateVoiceButtonState();
                     alert('Microphone permission denied. Please enable it in your browser settings or click the microphone icon in the address bar.');
+                    isListening = false;
+                    updateVoiceButton();
                 } else if (event.error === 'no-speech') {
-                    console.log('No speech detected');
+                    // No speech detected - continue listening, don't stop
+                    console.log('No speech detected, continuing to listen...');
                 } else if (event.error === 'audio-capture') {
                     alert('No microphone found. Please connect a microphone and try again.');
+                    isListening = false;
+                    updateVoiceButton();
+                } else {
+                    console.warn('Speech recognition error:', event.error, '- continuing to listen');
                 }
             };
             
             recognition.onend = () => {
-                isListening = false;
-                updateVoiceButton();
+                // Only restart if we're still supposed to be listening (user hasn't clicked stop)
+                if (isListening) {
+                    try {
+                        console.log('Recognition ended, restarting...');
+                        recognition.start();
+                    } catch (e) {
+                        console.error('Error restarting recognition:', e);
+                        isListening = false;
+                        updateVoiceButton();
+                    }
+                }
+            };
+
+            recognition.onstart = () => {
+                console.log('Basic voice recognition started');
+                accumulatedTranscript = '';  // Reset for new session
+                lastProcessedIndex = 0;  // Reset processed index
             };
 
             isListening = true;
             updateVoiceButton();
+            transcriptText.textContent = '';
             transcriptContainer.style.display = 'none';
             recognition.start();
         } catch (error) {
@@ -597,26 +617,32 @@ person2LangSelect.addEventListener('change', async (e) => {
 function updatePersonButtons() {
     if (!isListening) {
         person1Icon.textContent = '👤';
-        person1Text.textContent = 'Person 1 Speak';
+        person1Text.textContent = 'Person 1 Start';
         person2Icon.textContent = '👤';
-        person2Text.textContent = 'Person 2 Speak';
+        person2Text.textContent = 'Person 2 Start';
         person1Btn.classList.remove('listening');
         person2Btn.classList.remove('listening');
+        person1Btn.title = 'Click to start listening for Person 1';
+        person2Btn.title = 'Click to start listening for Person 2';
     } else {
         if (currentSpeaker === 'person1') {
             person1Icon.textContent = '🔴';
-            person1Text.textContent = 'Listening...';
+            person1Text.textContent = 'Person 1 Stop';
             person1Btn.classList.add('listening');
             person2Btn.classList.remove('listening');
             person2Icon.textContent = '👤';
-            person2Text.textContent = 'Person 2 Speak';
+            person2Text.textContent = 'Person 2 Start';
+            person1Btn.title = 'Click to stop listening and translate';
+            person2Btn.title = 'Person 1 is speaking';
         } else if (currentSpeaker === 'person2') {
             person2Icon.textContent = '🔴';
-            person2Text.textContent = 'Listening...';
+            person2Text.textContent = 'Person 2 Stop';
             person2Btn.classList.add('listening');
             person1Btn.classList.remove('listening');
             person1Icon.textContent = '👤';
-            person1Text.textContent = 'Person 1 Speak';
+            person1Text.textContent = 'Person 1 Start';
+            person2Btn.title = 'Click to stop listening and translate';
+            person1Btn.title = 'Person 2 is speaking';
         }
     }
 }
@@ -642,10 +668,22 @@ person1Btn.addEventListener('click', async () => {
     }
 
     if (isListening && currentSpeaker === 'person1') {
-        recognition.stop();
+        // Stop listening and process accumulated transcript
+        try {
+            recognition.stop();
+        } catch (error) {
+            console.error('Error stopping recognition:', error);
+        }
         isListening = false;
         currentSpeaker = null;
         updatePersonButtons();
+        
+        // Process the accumulated transcript when user manually stops
+        const currentTranscript = person1TranscriptText.textContent.trim();
+        if (currentTranscript) {
+            console.log('Processing person1 transcript on manual stop:', currentTranscript);
+            await handleConversationTranslate(currentTranscript, 'person1');
+        }
     } else if (!isListening) {
         try {
             currentSpeaker = 'person1';
@@ -657,37 +695,84 @@ person1Btn.addEventListener('click', async () => {
                 'kn': 'kn-IN'
             };
             recognition.lang = langMap[person1Lang] || person1Lang;
+
+            let accumulatedTranscript = '';  // Store all speech during session
+            let lastProcessedIndex = 0;  // Track which results we've already processed
             
-            // Set up result handler for conversation mode
-            recognition.onresult = async (event) => {
-                const spokenText = event.results[0][0].transcript;
-                isListening = false;
-                updatePersonButtons();
-                await handleConversationTranslate(spokenText, 'person1');
+            // Set up result handler for conversation mode with continuous recording
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let newFinalTranscript = '';
+
+                // Process only NEW results (from lastProcessedIndex onwards)
+                for (let i = lastProcessedIndex; i < event.results.length; i++) {
+                    const transcriptText = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        newFinalTranscript += transcriptText + ' ';
+                        lastProcessedIndex = i + 1;  // Update processed index
+                    } else {
+                        interimTranscript += transcriptText;
+                    }
+                }
+
+                // Add only NEW final results to accumulated transcript
+                if (newFinalTranscript) {
+                    accumulatedTranscript += newFinalTranscript;
+                }
+
+                // Show accumulated + interim text for real-time feedback
+                const fullTranscript = accumulatedTranscript + interimTranscript;
+                person1TranscriptText.textContent = fullTranscript;
+                person1Transcript.style.display = 'block';
+                person1TranslationText.textContent = ''; // Clear previous translation
             };
             
-            recognition.onerror = async (event) => {
+            recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
-                isListening = false;
-                currentSpeaker = null;
-                updatePersonButtons();
-                
                 if (event.error === 'not-allowed' || event.error === 'permission-denied') {
                     micPermission = 'denied';
                     updateVoiceButtonState();
+                    isListening = false;
+                    currentSpeaker = null;
+                    updatePersonButtons();
+                } else if (event.error === 'no-speech') {
+                    // No speech detected - continue listening, don't stop
+                    console.log('No speech detected, continuing to listen...');
+                } else if (event.error === 'audio-capture') {
+                    alert('No microphone found. Please connect a microphone and try again.');
+                    isListening = false;
+                    currentSpeaker = null;
+                    updatePersonButtons();
+                } else {
+                    console.warn('Speech recognition error:', event.error, '- continuing to listen');
                 }
             };
             
             recognition.onend = () => {
-                isListening = false;
-                if (currentSpeaker === 'person1') {
-                    currentSpeaker = null;
+                // Only restart if we're still supposed to be listening (user hasn't clicked stop)
+                if (isListening && currentSpeaker === 'person1') {
+                    try {
+                        console.log('Recognition ended, restarting...');
+                        recognition.start();
+                    } catch (e) {
+                        console.error('Error restarting recognition:', e);
+                        isListening = false;
+                        currentSpeaker = null;
+                        updatePersonButtons();
+                    }
                 }
-                updatePersonButtons();
+            };
+
+            recognition.onstart = () => {
+                console.log('Person1 conversation recognition started');
+                accumulatedTranscript = '';  // Reset for new session
+                lastProcessedIndex = 0;  // Reset processed index
             };
             
             updatePersonButtons();
             conversationTranscripts.style.display = 'flex';
+            person1TranscriptText.textContent = '';
+            person1TranslationText.textContent = '';
             person1Transcript.style.display = 'none';
             recognition.start();
         } catch (error) {
@@ -720,10 +805,22 @@ person2Btn.addEventListener('click', async () => {
     }
 
     if (isListening && currentSpeaker === 'person2') {
-        recognition.stop();
+        // Stop listening and process accumulated transcript
+        try {
+            recognition.stop();
+        } catch (error) {
+            console.error('Error stopping recognition:', error);
+        }
         isListening = false;
         currentSpeaker = null;
         updatePersonButtons();
+        
+        // Process the accumulated transcript when user manually stops
+        const currentTranscript = person2TranscriptText.textContent.trim();
+        if (currentTranscript) {
+            console.log('Processing person2 transcript on manual stop:', currentTranscript);
+            await handleConversationTranslate(currentTranscript, 'person2');
+        }
     } else if (!isListening) {
         try {
             currentSpeaker = 'person2';
@@ -735,37 +832,84 @@ person2Btn.addEventListener('click', async () => {
                 'kn': 'kn-IN'
             };
             recognition.lang = langMap[person2Lang] || person2Lang;
+
+            let accumulatedTranscript = '';  // Store all speech during session
+            let lastProcessedIndex = 0;  // Track which results we've already processed
             
-            // Set up result handler for conversation mode
-            recognition.onresult = async (event) => {
-                const spokenText = event.results[0][0].transcript;
-                isListening = false;
-                updatePersonButtons();
-                await handleConversationTranslate(spokenText, 'person2');
+            // Set up result handler for conversation mode with continuous recording
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let newFinalTranscript = '';
+
+                // Process only NEW results (from lastProcessedIndex onwards)
+                for (let i = lastProcessedIndex; i < event.results.length; i++) {
+                    const transcriptText = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        newFinalTranscript += transcriptText + ' ';
+                        lastProcessedIndex = i + 1;  // Update processed index
+                    } else {
+                        interimTranscript += transcriptText;
+                    }
+                }
+
+                // Add only NEW final results to accumulated transcript
+                if (newFinalTranscript) {
+                    accumulatedTranscript += newFinalTranscript;
+                }
+
+                // Show accumulated + interim text for real-time feedback
+                const fullTranscript = accumulatedTranscript + interimTranscript;
+                person2TranscriptText.textContent = fullTranscript;
+                person2Transcript.style.display = 'block';
+                person2TranslationText.textContent = ''; // Clear previous translation
             };
             
-            recognition.onerror = async (event) => {
+            recognition.onerror = (event) => {
                 console.error('Speech recognition error:', event.error);
-                isListening = false;
-                currentSpeaker = null;
-                updatePersonButtons();
-                
                 if (event.error === 'not-allowed' || event.error === 'permission-denied') {
                     micPermission = 'denied';
                     updateVoiceButtonState();
+                    isListening = false;
+                    currentSpeaker = null;
+                    updatePersonButtons();
+                } else if (event.error === 'no-speech') {
+                    // No speech detected - continue listening, don't stop
+                    console.log('No speech detected, continuing to listen...');
+                } else if (event.error === 'audio-capture') {
+                    alert('No microphone found. Please connect a microphone and try again.');
+                    isListening = false;
+                    currentSpeaker = null;
+                    updatePersonButtons();
+                } else {
+                    console.warn('Speech recognition error:', event.error, '- continuing to listen');
                 }
             };
             
             recognition.onend = () => {
-                isListening = false;
-                if (currentSpeaker === 'person2') {
-                    currentSpeaker = null;
+                // Only restart if we're still supposed to be listening (user hasn't clicked stop)
+                if (isListening && currentSpeaker === 'person2') {
+                    try {
+                        console.log('Recognition ended, restarting...');
+                        recognition.start();
+                    } catch (e) {
+                        console.error('Error restarting recognition:', e);
+                        isListening = false;
+                        currentSpeaker = null;
+                        updatePersonButtons();
+                    }
                 }
-                updatePersonButtons();
+            };
+
+            recognition.onstart = () => {
+                console.log('Person2 conversation recognition started');
+                accumulatedTranscript = '';  // Reset for new session
+                lastProcessedIndex = 0;  // Reset processed index
             };
             
             updatePersonButtons();
             conversationTranscripts.style.display = 'flex';
+            person2TranscriptText.textContent = '';
+            person2TranslationText.textContent = '';
             person2Transcript.style.display = 'none';
             recognition.start();
         } catch (error) {
